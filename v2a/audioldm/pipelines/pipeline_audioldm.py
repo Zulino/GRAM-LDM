@@ -1164,9 +1164,8 @@ class AudioLDMPipeline(DiffusionPipeline):
                                     args=args_gram,
                                     text=prompt,
                                     video=video_paths,
-                                    audio=None,  # Ignorato perché forniamo la waveform
-                                    audio_waveform=x0_waveform, # Passa il tensore
-                                    device=device
+                                    audio=x0_waveform, 
+                                    #device=device
                                 )
 
                                 evaluation_dict = gram_model(batch_for_gram, 'ret%tva', compute_loss=False)

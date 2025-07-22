@@ -9,4 +9,6 @@ v2a/audioldm/output
 # Ignore nested git repositories
 gram-model/
 gram-utils/
+pretrained_weights/
+gram_ckpt/
 

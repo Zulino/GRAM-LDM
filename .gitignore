@@ -6,3 +6,7 @@ v2a/demo/key_frames
 v2a/audioldm/output
 *__pycache__*
 
+# Ignore nested git repositories
+gram-model/
+gram-utils/
+

@@ -12,3 +12,8 @@ gram-utils/
 pretrained_weights/
 gram_ckpt/
 
+# Ignore files over 2GB (GitHub LFS limit)
+# These files need to be downloaded separately or hosted elsewhere
+# Note: Uncomment individual files if you need to track specific ones under 2GB
+pretrained_weights/clip/EVA01_CLIP_g_14_psz14_s11B.pt
+

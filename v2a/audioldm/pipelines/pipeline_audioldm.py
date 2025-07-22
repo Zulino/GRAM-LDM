@@ -1158,8 +1158,6 @@ class AudioLDMPipeline(DiffusionPipeline):
                                 for p in gram_model.parameters():
                                     p.requires_grad = False
 
-                                # Ora puoi chiamare build_batch direttamente con il tensore!
-                                # Non c'è più bisogno di salvare su disco.
                                 batch_for_gram = build_batch(
                                     args=args_gram,
                                     text=prompt,
@@ -1168,22 +1166,35 @@ class AudioLDMPipeline(DiffusionPipeline):
                                     #device=device
                                 )
 
-                                evaluation_dict = gram_model(batch_for_gram, 'ret%tva', compute_loss=False)
-                                feat_t = evaluation_dict['feat_t']
-                                feat_v = evaluation_dict['feat_v']
-                                feat_a = evaluation_dict['feat_a']
+                                print(f"DEBUG: build_batch inputs - text: {type(prompt)}, video: {type(video_paths)}, audio: {type(x0_waveform)}")
+                                if isinstance(prompt, list):
+                                    print(f"DEBUG: text length: {len(prompt)}")
+                                if isinstance(video_paths, list):
+                                    print(f"DEBUG: video_paths length: {len(video_paths)}")
+                                print(f"DEBUG: x0_waveform shape: {x0_waveform.shape}")
+                                print(f"DEBUG: batch_for_gram is None: {batch_for_gram is None}")
 
-                                # Clear temporary audio files
-                                for temp_path in temp_audio_files:
-                                    os.remove(temp_path)
+                                if batch_for_gram is None:
+                                    print("Warning: build_batch returned None, skipping GRAM loss computation")
+                                    calculated_loss = torch.tensor(0.0, device=device, requires_grad=True)
+                                else:
+                                    evaluation_dict = gram_model(batch_for_gram, 'ret%tva', compute_loss=False)
+                                    feat_t = evaluation_dict['feat_t']
+                                    feat_v = evaluation_dict['feat_v']
+                                    feat_a = evaluation_dict['feat_a']
 
-                                # Calculate the volume, we want to minimize it to maximize alignment.
-                                volume = self.volume_computation(feat_t, feat_v, feat_a)
-                                calculated_loss = volume.mean() # La loss è direttamente il volume.
+                                    # Clear temporary audio files
+                                    # for temp_path in temp_audio_files:
+                                    #     os.remove(temp_path)
+
+                                    # Calculate the volume, we want to minimize it to maximize alignment.
+                                    volume = self.volume_computation(feat_t, feat_v, feat_a)
+                                    calculated_loss = volume.mean() # La loss è direttamente il volume.
                             
 
                             ######## USE BIND LOSS ########
                             else:
+                                print("Using BIND loss")
                                 image_bind_video_input = load_and_transform_video_data(video_paths, device, clip_duration=clip_duration, clips_per_video=clips_per_video, n_samples_per_clip=2)
                                 for p in bind_model.parameters():
                                     p.requires_grad = False

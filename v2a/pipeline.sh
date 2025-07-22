@@ -12,6 +12,6 @@ CUDA_VISIBLE_DEVICES=0 python video2audio.py \
                     --out_root output/demo \
                     --double_loss \
                     --start 0 \
-                    --end 1 \
+                    --end 15 \
                     --init_latents 
 

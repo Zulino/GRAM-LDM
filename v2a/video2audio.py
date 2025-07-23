@@ -28,6 +28,14 @@ from audioldm.pipelines.pipeline_audioldm import AudioLDMPipeline
 from imagebind.imagebind.models import imagebind_model
 
 # import for GRAM
+import sys
+import os
+
+# Add the gram-utils path to sys.path
+gram_utils_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'gram-utils'))
+if gram_utils_path not in sys.path:
+    sys.path.append(gram_utils_path)
+
 from utils.utils_for_fast_inference import get_args
 from utils.build_model import build_model
 ########################################################################################
@@ -236,7 +244,7 @@ for i in range(0, len(video_name_and_prompt_list), effective_batch_size):
                     bind_model=bind_model,
                     gram_model=gram_model,
                     args_gram=args_gram,
-                    use_gram_loss = False,
+                    use_gram_loss = True,
                     # num_waveforms_per_prompt=1 # Esplicito se vuoi essere sicuro
                 ).audios
                 

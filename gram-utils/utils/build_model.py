@@ -18,6 +18,17 @@ class DDP_modify(DDP):
 
 def build_model(args):
 
+    if args.run_cfg.pretrain_dir and not os.path.exists(args.run_cfg.pretrain_dir):
+        potential_path = os.path.join("..", args.run_cfg.pretrain_dir)
+        if os.path.exists(potential_path):
+            args.run_cfg.pretrain_dir = potential_path
+    
+    if args.run_cfg.checkpoint and not os.path.exists(args.run_cfg.checkpoint):
+        potential_path = os.path.join("..", args.run_cfg.checkpoint)
+        if os.path.exists(potential_path):
+            args.run_cfg.checkpoint = potential_path
+
+
     model = model_registry[args.model_cfg.model_type](args.model_cfg)
     checkpoint = {}
     

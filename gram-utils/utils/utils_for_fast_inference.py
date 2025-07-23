@@ -1,11 +1,6 @@
-import os
-import sys
-import json
-import random
-import argparse
-import numpy as np
-import torch.distributed as dist
 from easydict import EasyDict as edict
+import json
+import sys
 from utils.logger import LOGGER
 import os
 from torchvision.transforms.transforms import *
@@ -31,7 +26,6 @@ import torchaudio
 from utils.logger import LOGGER
 from utils.tool import split
 import audioread, librosa
-
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -50,7 +44,7 @@ import argparse
 def get_args(pretrain_dir=None):
     class Args:
         vision_resolution = 224
-        local_rank = int(os.environ['LOCAL_RANK'])
+        local_rank = int(os.environ.get('LOCAL_RANK', '0'))
         checkpoint = None
         output_dir = 'output/'
         gradient_accumulation_steps = 1
@@ -142,10 +136,15 @@ def get_args(pretrain_dir=None):
     
 
     args = Args()
-    #return args
-    args.config = './config/gram/finetune_cfg/retrieval-youcook.json'
+    script_dir = os.path.dirname(os.path.abspath(__file__)) # .../gram-utils/utils
+    project_root = os.path.dirname(os.path.dirname(script_dir)) # .../Seeing-and-Hearing
+    config_path = os.path.join(project_root, 'config/gram/finetune_cfg/retrieval-youcook.json')
+    
+    args.config = config_path
     args.pretrain_dir = pretrain_dir
     args = parse_with_config(args)
+    #return args
+
     args.run_cfg.pretrain_dir = pretrain_dir
     args.run_cfg.use_ddp = False
     return args
@@ -153,14 +152,18 @@ def get_args(pretrain_dir=None):
 def parse_with_config(args):
 
     #args = parser.parse_args()  
-    file_cfg = edict(json.load(open(args.config)))
-
+    config_path = args.config
+    file_cfg = edict(json.load(open(config_path)))
 
     cmd_cfg_keys = {arg[2:].split('=')[0] for arg in sys.argv[1:]
                         if arg.startswith('--')}
 
+    config_dir = os.path.dirname(config_path)
+    default_run_cfg_path = os.path.join(config_dir, '..', file_cfg.run_cfg.default.replace('./config/gram/', ''))
+
+
     ### load default run_cfg 
-    run_cfg = edict(json.load(open(file_cfg.run_cfg.default)))
+    run_cfg = edict(json.load(open(default_run_cfg_path)))
     ### overwrite run_cfg by config file 
     run_cfg.update(file_cfg.run_cfg)
     ### overwrite run_cfg by cmd
@@ -172,7 +175,8 @@ def parse_with_config(args):
     # if file_cfg['model_cfg']: must have
 
     ### load default model_cfg
-    model_cfg = edict(json.load(open(file_cfg.model_cfg.default)))
+    default_model_cfg_path = os.path.join(config_dir, '..', file_cfg.model_cfg.default.replace('./config/gram/', ''))
+    model_cfg = edict(json.load(open(default_model_cfg_path)))
     ### overwrite model_cfg by config file 
     model_cfg.update(file_cfg.model_cfg)
     
@@ -182,8 +186,11 @@ def parse_with_config(args):
         ### load pretrained model_cfg
         #("loading pretrained model_cfg")
         #print(args.pretrain_dir)
-        pretrain_model_cfg = edict(json.load(open(os.path.join(args.pretrain_dir,'log','hps.json')))).model_cfg
-        
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(config_path))))
+        absolute_pretrain_dir = os.path.join(project_root, args.pretrain_dir.strip('./'))
+        hps_path = os.path.join(absolute_pretrain_dir, 'log', 'hps.json')
+        pretrain_model_cfg = edict(json.load(open(hps_path))).model_cfg
+
         ### overwite inherit_keys
         global_inherit_keys = ['vision_encoder_type','pool_video']
         inherit_keys = list(set(global_inherit_keys)|set(model_cfg.inherit_keys))
@@ -468,15 +475,29 @@ class AudioMapper(object):
 
     def read(self, audio_path):
 
+        #waveform, sr = librosa.load(audio_path,sr=None)
+        waveform = audio_path
 
-        waveform, sr = librosa.load(audio_path,sr=None)
+        # Check if input is already a PyTorch tensor
+        if isinstance(waveform, torch.Tensor):
+            # If it's already a tensor, use it directly
+            if waveform.dim() == 1:
+                # If it's 1D, add batch dimension
+                waveform = waveform.unsqueeze(0)
+            elif waveform.dim() == 2 and waveform.shape[0] == 1:
+                # If it's already [1, N], use as is
+                pass
+            else:
+                # Handle other cases or raise error
+                raise ValueError(f"Unexpected waveform tensor shape: {waveform.shape}")
+        else:
+            # Convert numpy array or other formats to tensor
+            waveform = torch.tensor(waveform)
+            waveform = waveform.unsqueeze(0)
 
-        waveform=torch.tensor(waveform)
-        waveform= waveform.unsqueeze(0)
-
-        if sr != 16000:
-            trans = torchaudio.transforms.Resample(sr, 16000)
-            waveform = trans(waveform)
+        # if sr != 16000:
+        #     trans = torchaudio.transforms.Resample(sr, 16000)
+        #     waveform = trans(waveform)
             
         waveform = waveform * 2 ** 15
         fbank = torchaudio.compliance.kaldi.fbank(waveform, num_mel_bins=self.melbins, sample_frequency=16000, frame_length=25, frame_shift=10)
@@ -508,7 +529,52 @@ class AudioMapper(object):
 
 
 
+# def build_batch(args, text,video,audio):
+#     assert len(text) == len(video) == len(audio)
+#     id_txt = [i for i in range(len(text))]
+#     id_ = [i for i in range(len(text))]
+#     raw_captions = text
+
+
+#     visionMapper = VisionMapper(args.data_cfg.train[0],args)
+#     audioMapper = AudioMapper(args.data_cfg.train[0],args)
+
+
+#     vision_pixels = []
+#     for i in range(len(video)):
+#         video_frames = visionMapper.read(video[i])
+#         if video_frames is not None:
+#             vision_pixels.append(video_frames)
+#     if vision_pixels == []:
+#         return None
+
+#     vision_pixels = torch.stack(vision_pixels).float()
+
+#     audio_spectrograms = []
+#     for i in range(len(audio)):
+#         #print(audio[i])
+#         audio_frames = audioMapper.read(audio[i])
+#         if audio_frames is not None:
+#             audio_spectrograms.append(audio_frames)
+#     if audio_spectrograms == []:
+#         return None
+#     audio_spectrograms = torch.stack(audio_spectrograms).float()
+
+    
+#     batch = {}
+
+#     batch['ids'] = id_
+#     batch['raw_captions'] = raw_captions
+#     batch['vision_pixels'] = vision_pixels.cuda()
+#     batch['ids_txt'] = id_txt
+#     batch['audio_spectrograms'] = audio_spectrograms.cuda()
+
+
+
+#     return batch
+
 def build_batch(args, text,video,audio):
+    print(f"DEBUG build_batch: text={text}, video={video}, audio type={type(audio)}")
     assert len(text) == len(video) == len(audio)
     id_txt = [i for i in range(len(text))]
     id_ = [i for i in range(len(text))]
@@ -521,23 +587,35 @@ def build_batch(args, text,video,audio):
 
     vision_pixels = []
     for i in range(len(video)):
+        print(f"DEBUG: Processing video {i}: {video[i]}")
         video_frames = visionMapper.read(video[i])
         if video_frames is not None:
             vision_pixels.append(video_frames)
+            print(f"DEBUG: Video {i} processed successfully, shape: {video_frames.shape}")
+        else:
+            print(f"DEBUG: Video {i} failed to process")
     if vision_pixels == []:
+        print("DEBUG: No vision pixels processed, returning None")
         return None
 
     vision_pixels = torch.stack(vision_pixels).float()
+    print(f"DEBUG: Vision pixels stacked, final shape: {vision_pixels.shape}")
 
     audio_spectrograms = []
     for i in range(len(audio)):
+        print(f"DEBUG: Processing audio {i}, type: {type(audio[i])}, shape: {audio[i].shape if isinstance(audio[i], torch.Tensor) else 'N/A'}")
         #print(audio[i])
         audio_frames = audioMapper.read(audio[i])
         if audio_frames is not None:
             audio_spectrograms.append(audio_frames)
+            print(f"DEBUG: Audio {i} processed successfully, shape: {audio_frames.shape}")
+        else:
+            print(f"DEBUG: Audio {i} failed to process")
     if audio_spectrograms == []:
+        print("DEBUG: No audio spectrograms processed, returning None")
         return None
     audio_spectrograms = torch.stack(audio_spectrograms).float()
+    print(f"DEBUG: Audio spectrograms stacked, final shape: {audio_spectrograms.shape}")
 
     
     batch = {}
@@ -548,6 +626,7 @@ def build_batch(args, text,video,audio):
     batch['ids_txt'] = id_txt
     batch['audio_spectrograms'] = audio_spectrograms.cuda()
 
-
-
+    print("DEBUG: Batch created successfully")
     return batch
+
+

@@ -417,7 +417,7 @@ for i in range(0, len(video_name_and_prompt_list), effective_batch_size):
                     clip_duration=bp_clip_duration_for_batch,
                     clips_per_video=bp_clips_per_video_for_batch,
                     clip_start_times=clip_start_times,
-                    frames_per_clip=bp_frames_per_clip,
+                    n_samples_per_clip=bp_frames_per_clip,
                     num_optimization_steps=opt_step,
                     bind_model=bind_model,
                     gram_model=gram_model,
@@ -447,8 +447,12 @@ for i in range(0, len(video_name_and_prompt_list), effective_batch_size):
                     os.makedirs(cur_out_dir_for_item, exist_ok=True)
 
                     original_base = os.path.splitext(os.path.basename(item_video_name_full_path))[0]
-                    output_wav_path = os.path.join(cur_out_dir_for_item, f"{original_base}_generated.wav")
-                    output_mp4_path = os.path.join(cur_out_dir_for_item, f"{original_base}_generated.mp4")
+
+                    # Costruiamo il nuovo nome del file con il prefisso 'file_'
+                    # senza aggiungere il seed.
+                    new_filename_base = f"file_{original_base}_generated"
+                    output_wav_path = os.path.join(cur_out_dir_for_item, f"{new_filename_base}.wav")
+                    output_mp4_path = os.path.join(cur_out_dir_for_item, f"{new_filename_base}.mp4")
                     # if os.path.exists(output_wav_path) and os.path.exists(output_mp4_path):
                     #     print(f"Output già esistente per {original_base}, salto.")
                     #     continue

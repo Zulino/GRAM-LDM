@@ -1,0 +1,22 @@
+--- Log iniziato alle Thu Aug 28 09:25:00 PM CEST 2025 ---
+/mnt/media/HDD_4TB/riccardo/miniconda3/envs/seeing/lib/python3.10/site-packages/transformers/utils/hub.py:127: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/mnt/media/HDD_4TB/riccardo/Codici tesi/GRAM-LDM/v2a/qwen_caption.py", line 33, in <module>
+    tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-VL-Chat", trust_remote_code=True)
+  File "/mnt/media/HDD_4TB/riccardo/miniconda3/envs/seeing/lib/python3.10/site-packages/transformers/models/auto/tokenization_auto.py", line 861, in from_pretrained
+    tokenizer_class = get_class_from_dynamic_module(class_ref, pretrained_model_name_or_path, **kwargs)
+  File "/mnt/media/HDD_4TB/riccardo/miniconda3/envs/seeing/lib/python3.10/site-packages/transformers/dynamic_module_utils.py", line 502, in get_class_from_dynamic_module
+    final_module = get_cached_module_file(
+  File "/mnt/media/HDD_4TB/riccardo/miniconda3/envs/seeing/lib/python3.10/site-packages/transformers/dynamic_module_utils.py", line 331, in get_cached_module_file
+    create_dynamic_module(full_submodule)
+  File "/mnt/media/HDD_4TB/riccardo/miniconda3/envs/seeing/lib/python3.10/site-packages/transformers/dynamic_module_utils.py", line 69, in create_dynamic_module
+    init_hf_modules()
+  File "/mnt/media/HDD_4TB/riccardo/miniconda3/envs/seeing/lib/python3.10/site-packages/transformers/dynamic_module_utils.py", line 54, in init_hf_modules
+    os.makedirs(HF_MODULES_CACHE, exist_ok=True)
+  File "/mnt/media/HDD_4TB/riccardo/miniconda3/envs/seeing/lib/python3.10/os.py", line 215, in makedirs
+    makedirs(head, exist_ok=exist_ok)
+  File "/mnt/media/HDD_4TB/riccardo/miniconda3/envs/seeing/lib/python3.10/os.py", line 225, in makedirs
+    mkdir(name, mode)
+OSError: [Errno 28] No space left on device: '/home/riccardo/.cache/huggingface'
+--- Log terminato alle Thu Aug 28 09:25:01 PM CEST 2025 ---

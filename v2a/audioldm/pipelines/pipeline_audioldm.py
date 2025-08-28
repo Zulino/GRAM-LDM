@@ -1003,7 +1003,7 @@ class AudioLDMPipeline(DiffusionPipeline):
         clip_duration: float = 2.0,
         clips_per_video: int = 5,
         clip_start_times: Optional[List[float]] = None,
-        frames_per_clip: int = 2,
+        n_samples_per_clip: int = 2,
         num_optimization_steps: int = 1,
         optimization_starting_point: float = 0.2,
         eta: float = 0.0,
@@ -1117,7 +1117,7 @@ class AudioLDMPipeline(DiffusionPipeline):
                 clip_duration=clip_duration, 
                 clips_per_video=clips_per_video, 
                 clip_start_times=clip_start_times,  # Passa i tempi personalizzati
-                n_samples_per_clip=2  # Valore originale corretto: 2 frame per clip
+                n_samples_per_clip=n_samples_per_clip
             )
             
             for p in bind_model.parameters():

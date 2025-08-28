@@ -3,6 +3,7 @@ v2a/imagebind/.checkpoints/imagebind_huge.pth
 v2a/output
 v2a/qwen_ckpt
 v2a/demo/key_frames
+v2a/demo/key_frames_msrvtt
 v2a/audioldm/output
 *__pycache__*
 

@@ -20,6 +20,7 @@ from torchvision.transforms._transforms_video import NormalizeVideo
 import imageio, os
 import numpy as np 
 from imagebind.imagebind.models.multimodal_preprocessors import SimpleTokenizer
+import subprocess
 
 DEFAULT_AUDIO_FRAME_SHIFT_MS = 10  # in milliseconds
 
@@ -388,12 +389,15 @@ def load_and_transform_video_data(
     device,
     clip_duration=2,
     clips_per_video=5,
+    clip_start_times=None,  # Nuovi tempi di inizio personalizzati
     sample_rate=16000,
     n_samples_per_clip=2,
 ):
     if video_paths is None:
+        print("[DEBUG][video] video_paths is None", flush=True)
         return None
 
+    print(f"[DEBUG][video] video_paths: {video_paths}", flush=True)
     video_outputs = []
     video_transform = transforms.Compose(
         [
@@ -405,15 +409,25 @@ def load_and_transform_video_data(
         ]
     )
 
-    clip_sampler = ConstantClipsPerVideoSampler(
-        clip_duration=clip_duration, clips_per_video=clips_per_video
-    )
+    # Scegli tra sampling automatico o tempi personalizzati
+    if clip_start_times is not None:
+        # Usa tempi personalizzati
+        print(f"[DEBUG][video] Using custom clip start times: {clip_start_times}", flush=True)
+        use_custom_times = True
+    else:
+        # Usa il sampler originale
+        clip_sampler = ConstantClipsPerVideoSampler(
+            clip_duration=clip_duration, clips_per_video=clips_per_video
+        )
+        use_custom_times = False
+        
     frame_sampler = pv_transforms.UniformTemporalSubsample(num_samples=n_samples_per_clip)
 
     resize = transforms.Resize((224, 224))
 
 
     for video_path in video_paths:
+        print(f"[DEBUG][video] Processing video: {video_path}", flush=True)
         video = EncodedVideo.from_path(
             video_path,
             decoder="decord",
@@ -421,29 +435,90 @@ def load_and_transform_video_data(
             # **{"sample_rate": sample_rate},
         )
 
-        all_clips_timepoints = get_clip_timepoints(clip_sampler, video.duration)
-        # print('all_clips_timepoints: ', all_clips_timepoints)
+        # Usa ffprobe per ottenere la durata accurata, con fallback a pytorchvideo
+        try:
+            result = subprocess.run(
+                [
+                    'ffprobe', '-v', 'quiet', '-show_entries', 'format=duration',
+                    '-of', 'default=noprint_wrappers=1:nokey=1', video_path
+                ],
+                capture_output=True, text=True, check=True,
+            )
+            video_duration = float(result.stdout.strip())
+            print(f"[DEBUG][video] Using ffprobe duration: {video_duration:.3f}s for {video_path}", flush=True)
+        except (subprocess.CalledProcessError, ValueError, FileNotFoundError) as e:
+            # Fallback a pytorchvideo se ffprobe fallisce
+            video_duration = video.duration
+            print(f"[WARNING] ffprobe failed for {video_path} ({e}). Falling back to pytorchvideo duration: {video_duration:.3f}s", flush=True)
 
+        print(f"[DEBUG][video] Loaded video: {video_path}, effective duration: {video_duration}", flush=True)
+        
+        # Genera timepoints basati sul metodo scelto
+        if use_custom_times:
+            # Usa tempi personalizzati
+            all_clips_timepoints = []
+            for start_time in clip_start_times:
+                end_time = min(start_time + clip_duration, video_duration)
+                # Assicurati che start_time sia valido
+                start_time = max(0.0, min(start_time, video_duration - 0.1))
+                if end_time > start_time:
+                    all_clips_timepoints.append((start_time, end_time))
+        else:
+            # Usa il sampler originale
+            all_clips_timepoints = get_clip_timepoints(clip_sampler, video_duration)
+        
+        print(f"[DEBUG][video] all_clips_timepoints: {all_clips_timepoints}", flush=True)
         all_video = []
         for i_time, clip_timepoints in enumerate(all_clips_timepoints):
+            print(f"[DEBUG][video] Clip {i_time}: {clip_timepoints}", flush=True)
             # Read the clip, get frames
+            print(f"[DEBUG][video] get_clip({clip_timepoints[0]}, {clip_timepoints[1]})", flush=True)
+            print(f"[DEBUG][video] video.duration: {video.duration}", flush=True)
+            print(f"[DEBUG][video] clip_timepoints: {float(clip_timepoints[0])}, {float(clip_timepoints[1])}", flush=True)
             clip = video.get_clip(clip_timepoints[0], clip_timepoints[1])
+            print(f"[DEBUG][video] Got clip: {clip is not None}", flush=True)
             if clip is None:
                 raise ValueError("No clip found")
-            video_clip = frame_sampler(clip["video"])
+            
+            try:
+                # Check if clip has frames before sampling
+                if clip["video"].shape[0] == 0:
+                    print(f"[WARNING] Clip {i_time} has 0 frames, skipping...")
+                    continue
+                video_clip = frame_sampler(clip["video"])
+                print(f"[DEBUG][video] video_clip shape: {video_clip.shape}", flush=True)
+            except (AssertionError, IndexError, ValueError) as e:
+                print(f"[WARNING] Failed to sample clip {i_time}: {e}")
+                print(f"[WARNING] Clip shape: {clip['video'].shape if 'video' in clip else 'No video key'}")
+                continue
+                
             video_clip = video_clip / 255.0  # since this is float, need 0-1
 
             all_video.append(video_clip)
 
+        print(f"[DEBUG][video] Number of clips: {len(all_video)}", flush=True)
+        
+        # Check if we have at least one valid clip
+        if len(all_video) == 0:
+            raise ValueError(f"No valid clips found for video path: {video_path}")
+            
+        for idx, clip in enumerate(all_video):
+            print(f"[DEBUG][video] Clip {idx} shape: {clip.shape}, dtype: {clip.dtype}", flush=True)
+            
         all_video_save = all_video.copy()
+        print("[DEBUG][video] About to apply video_transform", flush=True)
         all_video = [video_transform(clip) for clip in all_video]
+        print("[DEBUG][video] Applied video_transform", flush=True)
         # all_video = SpatialCrop(224, num_crops=3)(all_video)
+        print("[DEBUG][video] About to apply resize", flush=True)
         all_video = [resize(vid) for vid in all_video]
+        print("[DEBUG][video] Applied resize", flush=True)
         all_video_save = [resize(vid) for vid in all_video_save]
 
         all_video = torch.stack(all_video, dim=0)
-        video_outputs.append(all_video)
 
+        video_outputs.append(all_video)
+    print(f"[DEBUG][video] Finished processing video: {video_path}", flush=True)
     return torch.stack(video_outputs, dim=0).to(device)
 
 

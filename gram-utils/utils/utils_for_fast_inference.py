@@ -33,12 +33,76 @@ warnings.filterwarnings('ignore')
 def str2bool(b):
     if b.lower() in ["false"]:
         return False
-    elif b.lower() in ["true"]:
+            
+
+
+
+def sync_gram_with_imagebind(args, imagebind_n_samples_per_clip=2):
+    """
+    Sincronizza i parametri GRAM con ImageBind per usare lo stesso numero di frames.
+    
+    Args:
+        args: Configurazione GRAM
+        imagebind_n_samples_per_clip: Numero di frames per clip usato da ImageBind
+    """
+    # Imposta il numero di frames per video per GRAM
+    if not hasattr(args.model_cfg, 'imagebind_frames_per_clip'):
+        args.model_cfg.imagebind_frames_per_clip = imagebind_n_samples_per_clip
+    
+    # Aggiorna anche la configurazione dei dati se necessario
+    for data_cfg in args.data_cfg.train:
+        if not hasattr(data_cfg, 'frames_per_video'):
+            data_cfg.frames_per_video = imagebind_n_samples_per_clip
+            
+    for data_cfg in args.data_cfg.val:
+        if not hasattr(data_cfg, 'frames_per_video'):
+            data_cfg.frames_per_video = imagebind_n_samples_per_clip
+    
+    LOGGER.info(f'GRAM synchronized with ImageBind: using {imagebind_n_samples_per_clip} frames per video')
+    return args
+
+
+def detect_imagebind_frames_from_pipeline(pipeline_file_path):
+    """
+    Rileva automaticamente il numero di frames usato da ImageBind dal codice della pipeline.
+    
+    Args:
+        pipeline_file_path: Percorso al file pipeline_audioldm.py
+    Returns:
+        int: Numero di frames per clip rilevato da ImageBind
+    """
+    try:
+        with open(pipeline_file_path, 'r') as f:
+            content = f.read()
+        
+        # Cerca pattern come n_samples_per_clip=2
+        import re
+        pattern = r'n_samples_per_clip\s*=\s*(\d+)'
+        matches = re.findall(pattern, content)
+        
+        if matches:
+            frames = int(matches[0])  # Prendi il primo match
+            LOGGER.info(f'Auto-detected ImageBind frames per clip: {frames}')
+            return frames
+        else:
+            LOGGER.warning('Could not auto-detect ImageBind frames, using default: 2')
+            return 2
+            
+    except Exception as e:
+        LOGGER.warning(f'Error auto-detecting ImageBind frames ({e}), using default: 2')
+        return 2
+
+
+def str_to_bool(b):
+    """Convert string to boolean"""
+    if b.lower() in ["true"]:
         return True
     elif b is None:
         return None
     else:
         raise Exception("Invalid Bool Value")
+
+
 import argparse
 
 def get_args(pretrain_dir=None):
@@ -344,6 +408,13 @@ class VisionMapper(object):
         self.extract_fps = getattr(d_cfg,'extract_fps',None)
         self.frame_fps = getattr(d_cfg,'frame_fps',None)
 
+        # NUOVO: Sincronizzazione con ImageBind frames per clip
+        self.frames_per_video = getattr(d_cfg, 'frames_per_video', None)
+        if self.frames_per_video is None:
+            # Fallback al valore di ImageBind se disponibile negli args
+            self.frames_per_video = getattr(args.model_cfg, 'imagebind_frames_per_clip', 2)
+        
+        LOGGER.info(f'{self.name} Using {self.frames_per_video} frames per video (ImageBind sync)')
 
         if self.vision_format.startswith('video'):        
             self.sample_num = d_cfg.vision_sample_num 
@@ -395,7 +466,8 @@ class VisionMapper(object):
             # Get the total number of frames in the video
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-            sample_num = 2
+            # USA il numero di frames configurabile (sincronizzato con ImageBind)
+            sample_num = self.frames_per_video
 
             if total_frames<sample_num:
                 cap.release()

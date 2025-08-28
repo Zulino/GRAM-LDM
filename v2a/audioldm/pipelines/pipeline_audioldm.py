@@ -235,7 +235,7 @@ class AudioLDMPipeline(DiffusionPipeline):
 
 
     def volume_computation(self, language, video, audio):
-        print(f"language shape: {language.shape}, video shape: {video.shape}, audio shape: {audio.shape}")
+        #print(f"language shape: {language.shape}, video shape: {video.shape}, audio shape: {audio.shape}")
         A = torch.stack([language, video, audio], dim=1)
         A_T = A.transpose(-2, -1)
         G = A @ A_T
@@ -1002,6 +1002,8 @@ class AudioLDMPipeline(DiffusionPipeline):
         num_waveforms_per_prompt: Optional[int] = 1,
         clip_duration: float = 2.0,
         clips_per_video: int = 5,
+        clip_start_times: Optional[List[float]] = None,
+        frames_per_clip: int = 2,
         num_optimization_steps: int = 1,
         optimization_starting_point: float = 0.2,
         eta: float = 0.0,
@@ -1099,8 +1101,38 @@ class AudioLDMPipeline(DiffusionPipeline):
 
         #image_bind_video_input = load_and_transform_video_data(video_paths, device, clip_duration=clip_duration, clips_per_video=clips_per_video, n_samples_per_clip=2)
         
-        # for p in bind_model.parameters():
-        #     p.requires_grad = False
+        # CACHE VIDEO EMBEDDINGS (versione funzionante originale)
+        print("[DEBUG][CACHE] Pre-caricamento video embeddings...", flush=True)
+        cached_video_embeddings = None
+        
+        if use_gram_loss and gram_model is not None:
+            # GRAM logic qui se necessario
+            pass
+        else:
+            # BIND logic - pre-calcola video embeddings una sola volta
+            print("[DEBUG][CACHE] Caricamento video per ImageBind...", flush=True)
+            image_bind_video_input = load_and_transform_video_data(
+                video_paths, 
+                device, 
+                clip_duration=clip_duration, 
+                clips_per_video=clips_per_video, 
+                clip_start_times=clip_start_times,  # Passa i tempi personalizzati
+                n_samples_per_clip=2  # Valore originale corretto: 2 frame per clip
+            )
+            
+            for p in bind_model.parameters():
+                p.requires_grad = False
+            
+            with torch.no_grad():
+                # Cache video embeddings
+                cached_video_embeddings = bind_model({
+                    ModalityType.VISION: image_bind_video_input
+                })
+                print(f"[DEBUG][CACHE] Video embeddings calcolati, shape: {cached_video_embeddings[ModalityType.VISION].shape}", flush=True)
+                
+            # Libera memoria del video processato
+            del image_bind_video_input
+            torch.cuda.empty_cache()
     
 
         # 7. Denoising loop
@@ -1108,6 +1140,11 @@ class AudioLDMPipeline(DiffusionPipeline):
         num_warmup_steps_bind = int(len(timesteps) * optimization_starting_point)
         with self.progress_bar(total=num_inference_steps) as progress_bar:
             for i, t in enumerate(timesteps):
+                print(f"[DEBUG] Step {i}/{len(timesteps)} - t={t}", flush=True)
+
+                print("[DEBUG] Prima di UNet, latents shape:", latents.shape, flush=True)
+        
+
                 # expand the latents if we are doing classifier free guidance
                 latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
                 
@@ -1115,6 +1152,8 @@ class AudioLDMPipeline(DiffusionPipeline):
                 
                 # predict the noise residual
                 with torch.no_grad():
+                    print("[DEBUG] Chiamata UNet...", flush=True)
+
                     noise_pred = self.unet(
                         latent_model_input,
                         t,
@@ -1122,6 +1161,8 @@ class AudioLDMPipeline(DiffusionPipeline):
                         class_labels=prompt_embeds,
                         cross_attention_kwargs=cross_attention_kwargs,
                     ).sample.to(dtype=latents_dtype)
+                    print("[DEBUG] Dopo UNet, noise_pred shape:", noise_pred.shape, flush=True)
+
 
                 # perform guidance
                 if do_classifier_free_guidance:
@@ -1129,8 +1170,11 @@ class AudioLDMPipeline(DiffusionPipeline):
                     noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
 
                 # compute the previous noisy sample x_t -> x_t-1
-                latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample    
-                
+                print("[DEBUG] Chiamata scheduler.step...", flush=True)
+
+                latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
+                print("[DEBUG] Dopo scheduler.step, latents shape:", latents.shape, flush=True)
+
                 latents_temp = latents.detach()
                 latents_temp.requires_grad = True
 
@@ -1162,17 +1206,16 @@ class AudioLDMPipeline(DiffusionPipeline):
                                     args=args_gram,
                                     text=prompt,
                                     video=video_paths,
-                                    audio=x0_waveform, 
-                                    #device=device
+                                    audio=x0_waveform,
                                 )
 
-                                print(f"DEBUG: build_batch inputs - text: {type(prompt)}, video: {type(video_paths)}, audio: {type(x0_waveform)}")
-                                if isinstance(prompt, list):
-                                    print(f"DEBUG: text length: {len(prompt)}")
-                                if isinstance(video_paths, list):
-                                    print(f"DEBUG: video_paths length: {len(video_paths)}")
-                                print(f"DEBUG: x0_waveform shape: {x0_waveform.shape}")
-                                print(f"DEBUG: batch_for_gram is None: {batch_for_gram is None}")
+                                #print(f"DEBUG: build_batch inputs - text: {type(prompt)}, video: {type(video_paths)}, audio: {type(x0_waveform)}")
+                                #if isinstance(prompt, list):
+                                    #print(f"DEBUG: text length: {len(prompt)}")
+                                #if isinstance(video_paths, list):
+                                    #print(f"DEBUG: video_paths length: {len(video_paths)}")
+                                #print(f"DEBUG: x0_waveform shape: {x0_waveform.shape}")
+                                #print(f"DEBUG: batch_for_gram is None: {batch_for_gram is None}")
 
                                 if batch_for_gram is None:
                                     print("Warning: build_batch returned None, skipping GRAM loss computation")
@@ -1194,25 +1237,26 @@ class AudioLDMPipeline(DiffusionPipeline):
 
                             ######## USE BIND LOSS ########
                             else:
-                                print("Using BIND loss")
-                                image_bind_video_input = load_and_transform_video_data(video_paths, device, clip_duration=clip_duration, clips_per_video=clips_per_video, n_samples_per_clip=2)
+                                # SOLO QUESTA RIGA È CAMBIATA: uso cached video invece di ricaricare
                                 for p in bind_model.parameters():
                                     p.requires_grad = False
                 
-                                #print(f"x0_waveform shape: {x0_waveform.shape}")
                                 # 4. waveform to imagebind mel-spectrogram
-                                x0_imagebind_audio_input = load_and_transform_audio_data_from_waveform(x0_waveform, org_sample_rate=self.vocoder.config.sampling_rate, 
-                                                    device=device, target_length=204, clip_duration=clip_duration, clips_per_video=clips_per_video)
-                                #print(f"x0_imagebind_audio_input shape: {x0_imagebind_audio_input.shape}")
+                                x0_imagebind_audio_input = load_and_transform_audio_data_from_waveform(
+                                    x0_waveform, 
+                                    org_sample_rate=self.vocoder.config.sampling_rate, 
+                                    device=device, 
+                                    target_length=204, 
+                                    clip_duration=clip_duration, 
+                                    clips_per_video=clips_per_video
+                                )
+                                
                                 current_prompts_for_bind_model: List[str]
                                 if isinstance(prompt, str):
-                                    current_prompts_for_bind_model = [prompt] # Effective batch_size = 1
+                                    current_prompts_for_bind_model = [prompt]
                                 elif isinstance(prompt, list):
-                                    current_prompts_for_bind_model = prompt # Effective batch_size = len(prompt)
+                                    current_prompts_for_bind_model = prompt
                                 else:
-                                    # This case implies prompt_embeds were passed, and raw text is not available.
-                                    # Text-audio loss cannot be computed directly.
-                                    # You might want to raise an error or skip text loss.
                                     logger.warning("Raw text prompt not available for BIND text-loss calculation.")
                                     current_prompts_for_bind_model = None
 
@@ -1223,21 +1267,23 @@ class AudioLDMPipeline(DiffusionPipeline):
                                 if current_prompts_for_bind_model is not None:
                                     inputs_for_bind[ModalityType.TEXT] = load_and_transform_text(current_prompts_for_bind_model, device)
                                 
-                                if video_paths is not None: # image_bind_video_input was loaded outside the loop
-                                    inputs_for_bind[ModalityType.VISION] = image_bind_video_input.detach() if isinstance(image_bind_video_input, torch.Tensor) else image_bind_video_input
-                                
-                                # Cast inputs to float16 if necessary
+                                # Cast inputs to float32
                                 for k_bind in inputs_for_bind:
                                     if isinstance(inputs_for_bind[k_bind], torch.Tensor):
                                         if inputs_for_bind[k_bind].dtype in [torch.float32, torch.float64]:
                                             inputs_for_bind[k_bind] = inputs_for_bind[k_bind].to(dtype=torch.float32)
-                                    elif isinstance(inputs_for_bind[k_bind], list): # Should not happen with current load_and_transform
+                                    elif isinstance(inputs_for_bind[k_bind], list):
                                         inputs_for_bind[k_bind] = [
                                             x.to(dtype=torch.float32) if (isinstance(x, torch.Tensor) and x.dtype in [torch.float32, torch.float64]) else x
                                             for x in inputs_for_bind[k_bind]
                                         ]
                             
+                                # Calcola embeddings per audio e text
                                 embeddings = bind_model(inputs_for_bind)
+                                
+                                # AGGIUNGI cached video embeddings (questa è l'unica ottimizzazione)
+                                if cached_video_embeddings is not None:
+                                    embeddings[ModalityType.VISION] = cached_video_embeddings[ModalityType.VISION]
                                 #normalize embeddings
                                 audio_embeds = F.normalize(embeddings[ModalityType.AUDIO], dim=1, p=2) # Shape: (batch_size * num_waveforms_per_prompt, embed_dim)
                                 #print(f"Shape of audio_embeds: {audio_embeds.shape}")
@@ -1261,12 +1307,19 @@ class AudioLDMPipeline(DiffusionPipeline):
                                 
                                 if loss_components_cosine > 0:
                                     calculated_loss = accumulated_cosine_loss_per_sample.mean()
+                                    print(f"[DEBUG] calculated_loss: {calculated_loss}", flush=True)
+                                    print(f"[DEBUG] calculated_loss shape: {calculated_loss.shape}", flush=True)
 
+                            print(f"[DEBUG] Ottimizzazione step {optim_step} per denoising step {i}", flush=True)
+                            print("[DEBUG] Prima di calculated_loss.backward()", flush=True)
                             if calculated_loss != 0: # Check if any loss was actually calculated
-                                print(f"Calculated loss: {calculated_loss.item()}")
+                                #print(f"Calculated loss: {calculated_loss.item()}")
                                 calculated_loss.backward() 
+                                print("[DEBUG] Dopo backward()", flush=True)
                                 optimizer.step()
+                                print("[DEBUG] Dopo optimizer.step()", flush=True)
                             optimizer.zero_grad()
+                            print("[DEBUG] Dopo optimizer.zero_grad()", flush=True)
 
                 latents = latents_temp.detach()
 
@@ -1276,6 +1329,11 @@ class AudioLDMPipeline(DiffusionPipeline):
                     progress_bar.update()
                     if callback is not None and i % callback_steps == 0:
                         callback(i, t, latents)
+                
+                if torch.cuda.is_available():
+                    used = torch.cuda.memory_allocated() / 1024**3
+                    total = torch.cuda.get_device_properties(device).total_memory / 1024**3
+                    print(f"[DEBUG][VRAM] GPU memory used: {used:.2f} GB / {total:.2f} GB", flush=True)
 
         # 8. Post-processing
         mel_spectrogram = self.decode_latents(latents)
@@ -1376,4 +1434,3 @@ class AudioLDMPipeline(DiffusionPipeline):
         )
 
         return latents
-    

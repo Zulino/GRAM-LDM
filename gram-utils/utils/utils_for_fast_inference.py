@@ -29,6 +29,12 @@ import audioread, librosa
 import warnings
 warnings.filterwarnings('ignore')
 
+# Debug helper activated when V2A_DEBUG=1
+_GRAM_DEBUG = os.environ.get('V2A_DEBUG', '0') == '1'
+def _dbg(*args, **kwargs):
+    if _GRAM_DEBUG:
+        print(*args, **kwargs)
+
 
 def str2bool(b):
     if b.lower() in ["false"]:
@@ -39,17 +45,17 @@ def str2bool(b):
 
 def sync_gram_with_imagebind(args, imagebind_n_samples_per_clip=2):
     """
-    Sincronizza i parametri GRAM con ImageBind per usare lo stesso numero di frames.
+    Sync GRAM frames per video with ImageBind frames.
     
     Args:
-        args: Configurazione GRAM
-        imagebind_n_samples_per_clip: Numero di frames per clip usato da ImageBind
+        args: GRAM configuration
+        imagebind_n_samples_per_clip: Number of frames per clip used by ImageBind
     """
-    # Imposta il numero di frames per video per GRAM
+    # Set the number of frames per video for GRAM
     if not hasattr(args.model_cfg, 'imagebind_frames_per_clip'):
         args.model_cfg.imagebind_frames_per_clip = imagebind_n_samples_per_clip
-    
-    # Aggiorna anche la configurazione dei dati se necessario
+
+    # Update data configuration if necessary
     for data_cfg in args.data_cfg.train:
         if not hasattr(data_cfg, 'frames_per_video'):
             data_cfg.frames_per_video = imagebind_n_samples_per_clip
@@ -64,24 +70,24 @@ def sync_gram_with_imagebind(args, imagebind_n_samples_per_clip=2):
 
 def detect_imagebind_frames_from_pipeline(pipeline_file_path):
     """
-    Rileva automaticamente il numero di frames usato da ImageBind dal codice della pipeline.
-    
+    Automatically detect the number of frames used by ImageBind from the pipeline code.
+
     Args:
-        pipeline_file_path: Percorso al file pipeline_audioldm.py
+        pipeline_file_path: Path to the pipeline_audioldm.py file
     Returns:
-        int: Numero di frames per clip rilevato da ImageBind
+        int: Number of frames per clip detected by ImageBind
     """
     try:
         with open(pipeline_file_path, 'r') as f:
             content = f.read()
-        
-        # Cerca pattern come n_samples_per_clip=2
+
+        # Search for pattern like n_samples_per_clip=2
         import re
         pattern = r'n_samples_per_clip\s*=\s*(\d+)'
         matches = re.findall(pattern, content)
         
         if matches:
-            frames = int(matches[0])  # Prendi il primo match
+            frames = int(matches[0])  # Take the first match
             LOGGER.info(f'Auto-detected ImageBind frames per clip: {frames}')
             return frames
         else:
@@ -408,10 +414,8 @@ class VisionMapper(object):
         self.extract_fps = getattr(d_cfg,'extract_fps',None)
         self.frame_fps = getattr(d_cfg,'frame_fps',None)
 
-        # NUOVO: Sincronizzazione con ImageBind frames per clip
         self.frames_per_video = getattr(d_cfg, 'frames_per_video', None)
         if self.frames_per_video is None:
-            # Fallback al valore di ImageBind se disponibile negli args
             self.frames_per_video = getattr(args.model_cfg, 'imagebind_frames_per_clip', 2)
         
         LOGGER.info(f'{self.name} Using {self.frames_per_video} frames per video (ImageBind sync)')
@@ -466,7 +470,7 @@ class VisionMapper(object):
             # Get the total number of frames in the video
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-            # USA il numero di frames configurabile (sincronizzato con ImageBind)
+            # Use the configurable number of frames (synced with ImageBind)
             sample_num = self.frames_per_video
 
             if total_frames<sample_num:
@@ -493,7 +497,7 @@ class VisionMapper(object):
                         frames.append(frame_rgb)
                     
                 # else:
-                #     return None #finisce qui
+                #     return None 
             
             while len(frames)<sample_num and frames_ids!=[]:
             # if len(frames)<sample_num:
@@ -646,7 +650,7 @@ class AudioMapper(object):
 #     return batch
 
 def build_batch(args, text,video,audio):
-    print(f"DEBUG build_batch: text={text}, video={video}, audio type={type(audio)}")
+    _dbg(f"DEBUG build_batch: text={text}, video={video}, audio type={type(audio)}")
     assert len(text) == len(video) == len(audio)
     id_txt = [i for i in range(len(text))]
     id_ = [i for i in range(len(text))]
@@ -659,35 +663,35 @@ def build_batch(args, text,video,audio):
 
     vision_pixels = []
     for i in range(len(video)):
-        print(f"DEBUG: Processing video {i}: {video[i]}")
+        _dbg(f"DEBUG: Processing video {i}: {video[i]}")
         video_frames = visionMapper.read(video[i])
         if video_frames is not None:
             vision_pixels.append(video_frames)
-            print(f"DEBUG: Video {i} processed successfully, shape: {video_frames.shape}")
+            _dbg(f"DEBUG: Video {i} processed successfully, shape: {video_frames.shape}")
         else:
-            print(f"DEBUG: Video {i} failed to process")
+            _dbg(f"DEBUG: Video {i} failed to process")
     if vision_pixels == []:
-        print("DEBUG: No vision pixels processed, returning None")
+        _dbg("DEBUG: No vision pixels processed, returning None")
         return None
 
     vision_pixels = torch.stack(vision_pixels).float()
-    print(f"DEBUG: Vision pixels stacked, final shape: {vision_pixels.shape}")
+    _dbg(f"DEBUG: Vision pixels stacked, final shape: {vision_pixels.shape}")
 
     audio_spectrograms = []
     for i in range(len(audio)):
-        print(f"DEBUG: Processing audio {i}, type: {type(audio[i])}, shape: {audio[i].shape if isinstance(audio[i], torch.Tensor) else 'N/A'}")
+        _dbg(f"DEBUG: Processing audio {i}, type: {type(audio[i])}, shape: {audio[i].shape if isinstance(audio[i], torch.Tensor) else 'N/A'}")
         #print(audio[i])
         audio_frames = audioMapper.read(audio[i])
         if audio_frames is not None:
             audio_spectrograms.append(audio_frames)
-            print(f"DEBUG: Audio {i} processed successfully, shape: {audio_frames.shape}")
+            _dbg(f"DEBUG: Audio {i} processed successfully, shape: {audio_frames.shape}")
         else:
-            print(f"DEBUG: Audio {i} failed to process")
+            _dbg(f"DEBUG: Audio {i} failed to process")
     if audio_spectrograms == []:
-        print("DEBUG: No audio spectrograms processed, returning None")
+        _dbg("DEBUG: No audio spectrograms processed, returning None")
         return None
     audio_spectrograms = torch.stack(audio_spectrograms).float()
-    print(f"DEBUG: Audio spectrograms stacked, final shape: {audio_spectrograms.shape}")
+    _dbg(f"DEBUG: Audio spectrograms stacked, final shape: {audio_spectrograms.shape}")
 
     
     batch = {}
@@ -698,7 +702,7 @@ def build_batch(args, text,video,audio):
     batch['ids_txt'] = id_txt
     batch['audio_spectrograms'] = audio_spectrograms.cuda()
 
-    print("DEBUG: Batch created successfully")
+    _dbg("DEBUG: Batch created successfully")
     return batch
 
 

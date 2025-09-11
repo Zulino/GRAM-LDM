@@ -4,6 +4,7 @@ v2a/output
 v2a/qwen_ckpt
 v2a/demo/key_frames
 v2a/demo/key_frames_msrvtt
+v2a/demo/key_frames_audiocaps
 v2a/audioldm/output
 *__pycache__*
 
@@ -17,4 +18,15 @@ gram_ckpt/
 # These files need to be downloaded separately or hosted elsewhere
 # Note: Uncomment individual files if you need to track specific ones under 2GB
 pretrained_weights/clip/EVA01_CLIP_g_14_psz14_s11B.pt
+
+embeddings_gram
+embeddings_imagebind
+v2a/qwen_caption.log
+v2a/video2audio.log
+v2a/extract_key_frame.log
+results_gram_20250910_160911.txt
+results_imagebind_20250910_161153.txt
+
+# Ignore root checkpoints directory to avoid pushing >2GB model weights
+.checkpoints/
 

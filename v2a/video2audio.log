@@ -1,22 +1,119 @@
---- Log iniziato alle Thu Aug 28 09:25:01 PM CEST 2025 ---
-Matplotlib created a temporary cache directory at /mnt/media/HDD_4TB/riccardo/Codici tesi/GRAM-LDM/v2a/matplotlib-1vdm0dqj because the default path (/home/riccardo/.cache/matplotlib) is not a writable directory; it is highly recommended to set the MPLCONFIGDIR environment variable to a writable directory, in particular to speed up the import of Matplotlib and to better support multiprocessing.
-There was a problem when trying to write in your cache folder (/home/riccardo/.cache/huggingface/hub). Please, ensure the directory exists and can be written to.
-Loading pipeline components...:   0%|          | 0/6 [00:00<?, ?it/s]Loading pipeline components...:  33%|███▎      | 2/6 [00:00<00:00,  9.39it/s]Loading pipeline components...:  50%|█████     | 3/6 [00:00<00:00,  9.32it/s]Loading pipeline components...: 100%|██████████| 6/6 [00:00<00:00, 15.70it/s]
-08/28/2025 21:25:05 - INFO - __main__ -   Auto-detected ImageBind frames per clip: 2
-08/28/2025 21:25:05 - INFO - __main__ -   GRAM synchronized with ImageBind: using 2 frames per video
-08/28/2025 21:25:05 - INFO - root -   Loaded EVA01-CLIP-g-14 model config.
-08/28/2025 21:25:12 - INFO - root -   Loading pretrained EVA01-CLIP-g-14 weights (./pretrained_weights/clip/EVA01_CLIP_g_14_psz14_s11B.pt).
-08/28/2025 21:25:13 - INFO - root -   incompatible_keys.missing_keys: []
-08/28/2025 21:25:13 - INFO - model.audio_encoders.beats.beats -   BEATs Config: {'input_patch_size': 16, 'embed_dim': 512, 'conv_bias': False, 'encoder_layers': 12, 'encoder_embed_dim': 768, 'encoder_ffn_embed_dim': 3072, 'encoder_attention_heads': 12, 'activation_fn': 'gelu', 'layer_wise_gradient_decay_ratio': 0.6, 'layer_norm_first': False, 'deep_norm': True, 'dropout': 0.0, 'attention_dropout': 0.0, 'activation_dropout': 0.0, 'encoder_layerdrop': 0.05, 'dropout_input': 0.0, 'conv_pos': 128, 'conv_pos_groups': 16, 'relative_position_embedding': True, 'num_buckets': 320, 'max_distance': 800, 'gru_rel_pos': True, 'finetuned_model': True, 'predictor_dropout': 0.0, 'predictor_class': 527}
+--- Log started at Thu Sep 11 12:29:40 PM CEST 2025 ---
+Loading pipeline components...:   0%|          | 0/6 [00:00<?, ?it/s]Loading pipeline components...:  50%|█████     | 3/6 [00:00<00:00, 24.83it/s]Loading pipeline components...: 100%|██████████| 6/6 [00:00<00:00, 21.93it/s]Loading pipeline components...: 100%|██████████| 6/6 [00:00<00:00, 22.31it/s]
+09/11/2025 12:29:44 - INFO - __main__ -   Caricamento dei modelli GRAM...
+09/11/2025 12:29:44 - INFO - __main__ -   Auto-detected ImageBind frames per clip: 2
+09/11/2025 12:29:44 - INFO - __main__ -   GRAM synchronized with ImageBind: using 2 frames per video
+09/11/2025 12:29:44 - INFO - root -   Loaded EVA01-CLIP-g-14 model config.
+09/11/2025 12:29:50 - INFO - root -   Loading pretrained EVA01-CLIP-g-14 weights (./pretrained_weights/clip/EVA01_CLIP_g_14_psz14_s11B.pt).
+09/11/2025 12:29:51 - INFO - root -   incompatible_keys.missing_keys: []
+09/11/2025 12:29:51 - INFO - model.audio_encoders.beats.beats -   BEATs Config: {'input_patch_size': 16, 'embed_dim': 512, 'conv_bias': False, 'encoder_layers': 12, 'encoder_embed_dim': 768, 'encoder_ffn_embed_dim': 3072, 'encoder_attention_heads': 12, 'activation_fn': 'gelu', 'layer_wise_gradient_decay_ratio': 0.6, 'layer_norm_first': False, 'deep_norm': True, 'dropout': 0.0, 'attention_dropout': 0.0, 'activation_dropout': 0.0, 'encoder_layerdrop': 0.05, 'dropout_input': 0.0, 'conv_pos': 128, 'conv_pos_groups': 16, 'relative_position_embedding': True, 'num_buckets': 320, 'max_distance': 800, 'gru_rel_pos': True, 'finetuned_model': True, 'predictor_dropout': 0.0, 'predictor_class': 527}
 Some weights of BertForMaskedLM were not initialized from the model checkpoint at .././pretrained_weights/bert/bert-base-uncased and are newly initialized: ['cls.predictions.bias', 'cls.predictions.transform.LayerNorm.bias', 'cls.predictions.transform.LayerNorm.weight', 'cls.predictions.transform.dense.bias', 'cls.predictions.transform.dense.weight', 'encoder.layer.0.crossattention.output.LayerNorm.bias', 'encoder.layer.0.crossattention.output.LayerNorm.weight', 'encoder.layer.0.crossattention.output.dense.bias', 'encoder.layer.0.crossattention.output.dense.weight', 'encoder.layer.0.crossattention.self.key.bias', 'encoder.layer.0.crossattention.self.key.weight', 'encoder.layer.0.crossattention.self.query.bias', 'encoder.layer.0.crossattention.self.query.weight', 'encoder.layer.0.crossattention.self.value.bias', 'encoder.layer.0.crossattention.self.value.weight', 'encoder.layer.1.crossattention.output.LayerNorm.bias', 'encoder.layer.1.crossattention.output.LayerNorm.weight', 'encoder.layer.1.crossattention.output.dense.bias', 'encoder.layer.1.crossattention.output.dense.weight', 'encoder.layer.1.crossattention.self.key.bias', 'encoder.layer.1.crossattention.self.key.weight', 'encoder.layer.1.crossattention.self.query.bias', 'encoder.layer.1.crossattention.self.query.weight', 'encoder.layer.1.crossattention.self.value.bias', 'encoder.layer.1.crossattention.self.value.weight', 'encoder.layer.10.crossattention.output.LayerNorm.bias', 'encoder.layer.10.crossattention.output.LayerNorm.weight', 'encoder.layer.10.crossattention.output.dense.bias', 'encoder.layer.10.crossattention.output.dense.weight', 'encoder.layer.10.crossattention.self.key.bias', 'encoder.layer.10.crossattention.self.key.weight', 'encoder.layer.10.crossattention.self.query.bias', 'encoder.layer.10.crossattention.self.query.weight', 'encoder.layer.10.crossattention.self.value.bias', 'encoder.layer.10.crossattention.self.value.weight', 'encoder.layer.11.crossattention.output.LayerNorm.bias', 'encoder.layer.11.crossattention.output.LayerNorm.weight', 'encoder.layer.11.crossattention.output.dense.bias', 'encoder.layer.11.crossattention.output.dense.weight', 'encoder.layer.11.crossattention.self.key.bias', 'encoder.layer.11.crossattention.self.key.weight', 'encoder.layer.11.crossattention.self.query.bias', 'encoder.layer.11.crossattention.self.query.weight', 'encoder.layer.11.crossattention.self.value.bias', 'encoder.layer.11.crossattention.self.value.weight', 'encoder.layer.2.crossattention.output.LayerNorm.bias', 'encoder.layer.2.crossattention.output.LayerNorm.weight', 'encoder.layer.2.crossattention.output.dense.bias', 'encoder.layer.2.crossattention.output.dense.weight', 'encoder.layer.2.crossattention.self.key.bias', 'encoder.layer.2.crossattention.self.key.weight', 'encoder.layer.2.crossattention.self.query.bias', 'encoder.layer.2.crossattention.self.query.weight', 'encoder.layer.2.crossattention.self.value.bias', 'encoder.layer.2.crossattention.self.value.weight', 'encoder.layer.3.crossattention.output.LayerNorm.bias', 'encoder.layer.3.crossattention.output.LayerNorm.weight', 'encoder.layer.3.crossattention.output.dense.bias', 'encoder.layer.3.crossattention.output.dense.weight', 'encoder.layer.3.crossattention.self.key.bias', 'encoder.layer.3.crossattention.self.key.weight', 'encoder.layer.3.crossattention.self.query.bias', 'encoder.layer.3.crossattention.self.query.weight', 'encoder.layer.3.crossattention.self.value.bias', 'encoder.layer.3.crossattention.self.value.weight', 'encoder.layer.4.crossattention.output.LayerNorm.bias', 'encoder.layer.4.crossattention.output.LayerNorm.weight', 'encoder.layer.4.crossattention.output.dense.bias', 'encoder.layer.4.crossattention.output.dense.weight', 'encoder.layer.4.crossattention.self.key.bias', 'encoder.layer.4.crossattention.self.key.weight', 'encoder.layer.4.crossattention.self.query.bias', 'encoder.layer.4.crossattention.self.query.weight', 'encoder.layer.4.crossattention.self.value.bias', 'encoder.layer.4.crossattention.self.value.weight', 'encoder.layer.5.crossattention.output.LayerNorm.bias', 'encoder.layer.5.crossattention.output.LayerNorm.weight', 'encoder.layer.5.crossattention.output.dense.bias', 'encoder.layer.5.crossattention.output.dense.weight', 'encoder.layer.5.crossattention.self.key.bias', 'encoder.layer.5.crossattention.self.key.weight', 'encoder.layer.5.crossattention.self.query.bias', 'encoder.layer.5.crossattention.self.query.weight', 'encoder.layer.5.crossattention.self.value.bias', 'encoder.layer.5.crossattention.self.value.weight', 'encoder.layer.6.crossattention.output.LayerNorm.bias', 'encoder.layer.6.crossattention.output.LayerNorm.weight', 'encoder.layer.6.crossattention.output.dense.bias', 'encoder.layer.6.crossattention.output.dense.weight', 'encoder.layer.6.crossattention.self.key.bias', 'encoder.layer.6.crossattention.self.key.weight', 'encoder.layer.6.crossattention.self.query.bias', 'encoder.layer.6.crossattention.self.query.weight', 'encoder.layer.6.crossattention.self.value.bias', 'encoder.layer.6.crossattention.self.value.weight', 'encoder.layer.7.crossattention.output.LayerNorm.bias', 'encoder.layer.7.crossattention.output.LayerNorm.weight', 'encoder.layer.7.crossattention.output.dense.bias', 'encoder.layer.7.crossattention.output.dense.weight', 'encoder.layer.7.crossattention.self.key.bias', 'encoder.layer.7.crossattention.self.key.weight', 'encoder.layer.7.crossattention.self.query.bias', 'encoder.layer.7.crossattention.self.query.weight', 'encoder.layer.7.crossattention.self.value.bias', 'encoder.layer.7.crossattention.self.value.weight', 'encoder.layer.8.crossattention.output.LayerNorm.bias', 'encoder.layer.8.crossattention.output.LayerNorm.weight', 'encoder.layer.8.crossattention.output.dense.bias', 'encoder.layer.8.crossattention.output.dense.weight', 'encoder.layer.8.crossattention.self.key.bias', 'encoder.layer.8.crossattention.self.key.weight', 'encoder.layer.8.crossattention.self.query.bias', 'encoder.layer.8.crossattention.self.query.weight', 'encoder.layer.8.crossattention.self.value.bias', 'encoder.layer.8.crossattention.self.value.weight', 'encoder.layer.9.crossattention.output.LayerNorm.bias', 'encoder.layer.9.crossattention.output.LayerNorm.weight', 'encoder.layer.9.crossattention.output.dense.bias', 'encoder.layer.9.crossattention.output.dense.weight', 'encoder.layer.9.crossattention.self.key.bias', 'encoder.layer.9.crossattention.self.key.weight', 'encoder.layer.9.crossattention.self.query.bias', 'encoder.layer.9.crossattention.self.query.weight', 'encoder.layer.9.crossattention.self.value.bias', 'encoder.layer.9.crossattention.self.value.weight']
 You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
-08/28/2025 21:25:16 - INFO - __main__ -   load_from_pretrained: .././gram_ckpt/GRAM_pretrained_4modalities/ckpt/model_step_459.pt
-08/28/2025 21:25:16 - INFO - __main__ -   Load from pretrained dir .././gram_ckpt/GRAM_pretrained_4modalities
-08/28/2025 21:25:16 - INFO - __main__ -   Unexpected keys []
-08/28/2025 21:25:16 - INFO - __main__ -   missing_keys  ['audio_encoder.predictor.weight', 'audio_encoder.predictor.bias', 'contra_head_d.linear.weight']
-Caricamento dei modelli GRAM...
-[DEBUG] ImageBind frames rilevati: 2 frames per clip
-[DEBUG] GRAM sincronizzato con ImageBind: 2 frames per video
-[DEBUG] Configurazione frames sincronizzata - ImageBind: 2/clip, GRAM: 2/video
+09/11/2025 12:29:54 - INFO - __main__ -   load_from_pretrained: .././gram_ckpt/GRAM_pretrained_4modalities/ckpt/model_step_459.pt
+09/11/2025 12:29:54 - INFO - __main__ -   Load from pretrained dir .././gram_ckpt/GRAM_pretrained_4modalities
+09/11/2025 12:29:54 - INFO - __main__ -   Unexpected keys []
+09/11/2025 12:29:54 - INFO - __main__ -   missing_keys  ['audio_encoder.predictor.weight', 'audio_encoder.predictor.bias', 'contra_head_d.linear.weight']
+09/11/2025 12:29:56 - INFO - __main__ -   Spazio disco disponibile: 89GB
 args.run_cfg.pretrain_dir .././gram_ckpt/GRAM_pretrained_4modalities
---- Log terminato alle Thu Aug 28 09:25:18 PM CEST 2025 ---
+  0%|          | 0/30 [00:00<?, ?it/s]09/11/2025 12:29:56 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+  3%|▎         | 1/30 [00:00<00:04,  6.77it/s]09/11/2025 12:29:57 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:29:57 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:29:57 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+ 13%|█▎        | 4/30 [00:00<00:01, 18.09it/s]09/11/2025 12:29:57 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:29:57 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:29:57 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+ 23%|██▎       | 7/30 [00:00<00:01, 22.78it/s]09/11/2025 12:29:57 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:29:57 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:29:57 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:29:57 - INFO - __main__ -   youcook_ret transforms none
+09/11/2025 12:29:58 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:29:58 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:29:58 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:29:58 - INFO - __main__ -   youcook_ret transforms none
+09/11/2025 12:29:59 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:29:59 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:29:59 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:29:59 - INFO - __main__ -   youcook_ret transforms none
+ 33%|███▎      | 10/30 [00:02<00:07,  2.72it/s]09/11/2025 12:29:59 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:29:59 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:29:59 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:29:59 - INFO - __main__ -   youcook_ret transforms none
+09/11/2025 12:30:00 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:00 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:00 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:00 - INFO - __main__ -   youcook_ret transforms none
+ 40%|████      | 12/30 [00:03<00:07,  2.38it/s]09/11/2025 12:30:00 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:00 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:00 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:00 - INFO - __main__ -   youcook_ret transforms none
+09/11/2025 12:30:01 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:01 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:01 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:01 - INFO - __main__ -   youcook_ret transforms none
+ 47%|████▋     | 14/30 [00:04<00:07,  2.18it/s]09/11/2025 12:30:01 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:01 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:01 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:01 - INFO - __main__ -   youcook_ret transforms none
+ 50%|█████     | 15/30 [00:05<00:07,  2.11it/s]09/11/2025 12:30:02 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:02 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:02 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:02 - INFO - __main__ -   youcook_ret transforms none
+ 53%|█████▎    | 16/30 [00:06<00:06,  2.04it/s]09/11/2025 12:30:02 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:03 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:03 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:03 - INFO - __main__ -   youcook_ret transforms none
+ 57%|█████▋    | 17/30 [00:06<00:06,  2.00it/s]09/11/2025 12:30:03 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:03 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:03 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:03 - INFO - __main__ -   youcook_ret transforms none
+ 60%|██████    | 18/30 [00:07<00:06,  1.95it/s]09/11/2025 12:30:04 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:04 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:04 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:04 - INFO - __main__ -   youcook_ret transforms none
+ 63%|██████▎   | 19/30 [00:07<00:05,  1.91it/s]09/11/2025 12:30:04 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:04 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:04 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:04 - INFO - __main__ -   youcook_ret transforms none
+ 67%|██████▋   | 20/30 [00:08<00:05,  1.89it/s]09/11/2025 12:30:05 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:05 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:05 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:05 - INFO - __main__ -   youcook_ret transforms none
+ 70%|███████   | 21/30 [00:08<00:04,  1.88it/s]09/11/2025 12:30:05 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:05 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:05 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:05 - INFO - __main__ -   youcook_ret transforms none
+ 73%|███████▎  | 22/30 [00:09<00:04,  1.86it/s]09/11/2025 12:30:06 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:06 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:06 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:06 - INFO - __main__ -   youcook_ret transforms none
+ 77%|███████▋  | 23/30 [00:09<00:03,  1.85it/s]09/11/2025 12:30:06 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:06 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:06 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:06 - INFO - __main__ -   youcook_ret transforms none
+ 80%|████████  | 24/30 [00:10<00:03,  1.84it/s]09/11/2025 12:30:07 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:07 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:07 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:07 - INFO - __main__ -   youcook_ret transforms none
+ 83%|████████▎ | 25/30 [00:10<00:02,  1.83it/s]09/11/2025 12:30:07 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:07 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:07 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:07 - INFO - __main__ -   youcook_ret transforms none
+ 87%|████████▋ | 26/30 [00:11<00:02,  1.84it/s]09/11/2025 12:30:08 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:08 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:08 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:08 - INFO - __main__ -   youcook_ret transforms none
+ 90%|█████████ | 27/30 [00:12<00:01,  1.83it/s]09/11/2025 12:30:08 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:09 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:09 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:09 - INFO - __main__ -   youcook_ret transforms none
+ 93%|█████████▎| 28/30 [00:12<00:01,  1.83it/s]09/11/2025 12:30:09 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:09 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:09 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:09 - INFO - __main__ -   youcook_ret transforms none
+ 97%|█████████▋| 29/30 [00:13<00:00,  1.82it/s]09/11/2025 12:30:10 - INFO - audioldm.models.unet -   Forward upsample size to force interpolation output size.
+09/11/2025 12:30:10 - INFO - __main__ -   youcook_ret Using 2 frames per video (ImageBind sync)
+09/11/2025 12:30:10 - INFO - __main__ -   youcook_ret Using clip mean and std.
+09/11/2025 12:30:10 - INFO - __main__ -   youcook_ret transforms none
+100%|██████████| 30/30 [00:13<00:00,  1.82it/s]100%|██████████| 30/30 [00:13<00:00,  2.19it/s]
+09/11/2025 12:30:10 - INFO - __main__ -   Audio generation for: /mnt/media/HDD_4TB/riccardo/Codici tesi/GRAM-LDM/v2a/demo/source/0OriTE8vb6s_000150.mp4
+--- Log ended at Thu Sep 11 12:30:12 PM CEST 2025 ---

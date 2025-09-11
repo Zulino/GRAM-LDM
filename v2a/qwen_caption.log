@@ -1,22 +1,6 @@
---- Log iniziato alle Thu Aug 28 09:25:00 PM CEST 2025 ---
-/mnt/media/HDD_4TB/riccardo/miniconda3/envs/seeing/lib/python3.10/site-packages/transformers/utils/hub.py:127: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
-  warnings.warn(
-Traceback (most recent call last):
-  File "/mnt/media/HDD_4TB/riccardo/Codici tesi/GRAM-LDM/v2a/qwen_caption.py", line 33, in <module>
-    tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-VL-Chat", trust_remote_code=True)
-  File "/mnt/media/HDD_4TB/riccardo/miniconda3/envs/seeing/lib/python3.10/site-packages/transformers/models/auto/tokenization_auto.py", line 861, in from_pretrained
-    tokenizer_class = get_class_from_dynamic_module(class_ref, pretrained_model_name_or_path, **kwargs)
-  File "/mnt/media/HDD_4TB/riccardo/miniconda3/envs/seeing/lib/python3.10/site-packages/transformers/dynamic_module_utils.py", line 502, in get_class_from_dynamic_module
-    final_module = get_cached_module_file(
-  File "/mnt/media/HDD_4TB/riccardo/miniconda3/envs/seeing/lib/python3.10/site-packages/transformers/dynamic_module_utils.py", line 331, in get_cached_module_file
-    create_dynamic_module(full_submodule)
-  File "/mnt/media/HDD_4TB/riccardo/miniconda3/envs/seeing/lib/python3.10/site-packages/transformers/dynamic_module_utils.py", line 69, in create_dynamic_module
-    init_hf_modules()
-  File "/mnt/media/HDD_4TB/riccardo/miniconda3/envs/seeing/lib/python3.10/site-packages/transformers/dynamic_module_utils.py", line 54, in init_hf_modules
-    os.makedirs(HF_MODULES_CACHE, exist_ok=True)
-  File "/mnt/media/HDD_4TB/riccardo/miniconda3/envs/seeing/lib/python3.10/os.py", line 215, in makedirs
-    makedirs(head, exist_ok=exist_ok)
-  File "/mnt/media/HDD_4TB/riccardo/miniconda3/envs/seeing/lib/python3.10/os.py", line 225, in makedirs
-    mkdir(name, mode)
-OSError: [Errno 28] No space left on device: '/home/riccardo/.cache/huggingface'
---- Log terminato alle Thu Aug 28 09:25:01 PM CEST 2025 ---
+--- Log started at Thu Sep 11 12:29:32 PM CEST 2025 ---
+The model is automatically converting to fp16 for faster inference. If you want to disable the automatic precision, please manually add bf16/fp16/fp32=True to "AutoModelForCausalLM.from_pretrained".
+Loading checkpoint shards:   0%|          | 0/10 [00:00<?, ?it/s]Loading checkpoint shards:  10%|█         | 1/10 [00:00<00:04,  1.92it/s]Loading checkpoint shards:  20%|██        | 2/10 [00:00<00:03,  2.03it/s]Loading checkpoint shards:  30%|███       | 3/10 [00:01<00:03,  2.06it/s]Loading checkpoint shards:  40%|████      | 4/10 [00:01<00:02,  2.07it/s]Loading checkpoint shards:  50%|█████     | 5/10 [00:02<00:02,  2.09it/s]Loading checkpoint shards:  60%|██████    | 6/10 [00:02<00:01,  2.10it/s]Loading checkpoint shards:  70%|███████   | 7/10 [00:03<00:01,  2.11it/s]Loading checkpoint shards:  80%|████████  | 8/10 [00:03<00:00,  2.17it/s]Loading checkpoint shards:  90%|█████████ | 9/10 [00:04<00:00,  2.26it/s]Loading checkpoint shards: 100%|██████████| 10/10 [00:04<00:00,  2.35it/s]Loading checkpoint shards: 100%|██████████| 10/10 [00:04<00:00,  2.18it/s]
+Captioning:   0%|          | 0/9 [00:00<?, ?it/s]Captioning: 100%|██████████| 9/9 [00:00<00:00, 136770.78it/s]
+Captioning phase:
+--- Log ended at Thu Sep 11 12:29:40 PM CEST 2025 ---

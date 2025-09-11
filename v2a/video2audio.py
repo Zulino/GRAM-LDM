@@ -6,6 +6,7 @@ import random
 import argparse
 from glob import glob
 from itertools import islice
+import logging
 
 # Aggiungi il percorso della cartella 'gram-utils' al path di Python
 # in modo che l'import di 'utils' funzioni correttamente.
@@ -61,6 +62,14 @@ parser.add_argument("--use_gram_loss", action='store_true', default=False)
 
 args = parser.parse_args()
 
+# Logging setup (silent by default unless V2A_DEBUG or V2A_LOG_LEVEL set)
+_env_log_level = os.environ.get("V2A_LOG_LEVEL")
+if os.environ.get("V2A_DEBUG") == "1" and not _env_log_level:
+    _env_log_level = "DEBUG"
+log_level = getattr(logging, (_env_log_level or "INFO").upper(), logging.INFO)
+logging.basicConfig(level=log_level, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
+
 # repo_id = "cvssp/audioldm-m-full"
 local_model_path = 'ckpt/audioldm-m-full'
 unet = UNet2DConditionModel.from_pretrained(local_model_path, subfolder='unet').to('cuda')
@@ -70,7 +79,7 @@ gram_model = None
 bind_model = None
 args_gram = None
 if args.use_gram_loss:
-    print("Caricamento dei modelli GRAM...")
+    logger.info("Caricamento dei modelli GRAM...")
     pretrain_dir = './gram_ckpt/GRAM_pretrained_4modalities'  # Percorso per i checkpoint GRAM
     args_gram = get_args(pretrain_dir)
     
@@ -80,21 +89,19 @@ if args.use_gram_loss:
     # Rileva automaticamente il numero di frames da ImageBind
     imagebind_pipeline_path = "./audioldm/pipelines/pipeline_audioldm.py"
     imagebind_frames = detect_imagebind_frames_from_pipeline(imagebind_pipeline_path)
-    print(f"[DEBUG] ImageBind frames rilevati: {imagebind_frames} frames per clip")
+    logger.debug(f"ImageBind frames rilevati: {imagebind_frames} frames per clip")
     
     args_gram = sync_gram_with_imagebind(args_gram, imagebind_n_samples_per_clip=imagebind_frames)
-    print(f"[DEBUG] GRAM sincronizzato con ImageBind: {args_gram.model_cfg.imagebind_frames_per_clip} frames per video")
-    print(f"[DEBUG] Configurazione frames sincronizzata - ImageBind: {imagebind_frames}/clip, GRAM: {args_gram.model_cfg.imagebind_frames_per_clip}/video")
+    logger.debug(f"GRAM sincronizzato con ImageBind: {args_gram.model_cfg.imagebind_frames_per_clip} frames per video")
+    logger.debug(f"Configurazione frames sincronizzata - ImageBind: {imagebind_frames}/clip, GRAM: {args_gram.model_cfg.imagebind_frames_per_clip}/video")
     
     gram_model, _, _ = build_model(args_gram)
     gram_model.to('cuda').eval()
 else:
     bind_model = imagebind_model.imagebind_huge(pretrained=True).to("cuda", dtype=torch.float32)
     bind_model.eval()
-    
-    # Debug per configurazione ImageBind-only
-    print(f"[DEBUG] Modalità ImageBind-only: usando n_samples_per_clip=2 frames per clip (default)")
-    print(f"[DEBUG] GRAM non attivo (--use_gram_loss non specificato)")
+    logger.debug("Modalità ImageBind-only: usando n_samples_per_clip=2 frames per clip (default)")
+    logger.debug("GRAM non attivo (--use_gram_loss non specificato)")
 
 # NOTA: I Mapper del notebook per l'inferenza GRAM sembrano essere helper usati da `build_batch`.
 # La logica di `build_batch` è ciò che serve. Verrà passata alla pipeline.
@@ -249,7 +256,7 @@ for i in range(0, len(video_name_and_prompt_list), effective_batch_size):
 
     # Salta l'ultimo batch se non è completo
     if len(current_batch_info_list) < effective_batch_size:
-        print(f"Skipping last incomplete batch of size {len(current_batch_info_list)}.")
+        logger.info(f"Skipping last incomplete batch of size {len(current_batch_info_list)}.")
         continue
 
     # Controlla spazio disco all'inizio di ogni batch
@@ -258,11 +265,11 @@ for i in range(0, len(video_name_and_prompt_list), effective_batch_size):
     free_gb = disk_usage.free // (1024**3)
     
     if free_gb < 30:  # Meno di 30GB liberi
-        print(f"[ERROR] Spazio disco insufficiente: {free_gb}GB liberi. Interrompo la generazione.")
-        print(f"[ERROR] Pulisci spazio disco prima di continuare.")
+        logger.error(f"Spazio disco insufficiente: {free_gb}GB liberi. Interrompo la generazione.")
+        logger.error("Pulisci spazio disco prima di continuare.")
         break
     elif free_gb < 50:  # Meno di 50GB liberi
-        print(f"[WARNING] Spazio disco basso: {free_gb}GB liberi. Attivo pulizia aggressiva.")
+        logger.warning(f"Spazio disco basso: {free_gb}GB liberi. Attivo pulizia aggressiva.")
         # Esegui pulizia preventiva
         try:
             cleanup_script = os.path.join(os.path.dirname(__file__), "cleanup_temp_files.py")
@@ -273,7 +280,7 @@ for i in range(0, len(video_name_and_prompt_list), effective_batch_size):
         except Exception:
             pass
     
-    print(f"[INFO] Spazio disco disponibile: {free_gb}GB")
+    logger.info(f"Spazio disco disponibile: {free_gb}GB")
 
     prompts_batch = [item['prompt'] for item in current_batch_info_list]
     video_paths_batch = [item['video_name'] for item in current_batch_info_list]
@@ -304,13 +311,13 @@ for i in range(0, len(video_name_and_prompt_list), effective_batch_size):
             '-of', 'default=noprint_wrappers=1:nokey=1', video_paths_batch[0]
         ], capture_output=True, text=True, check=True)
         video_duration = float(result.stdout.strip())
-        print(f"[DEBUG] Using ffprobe duration: {video_duration:.3f}s")
+        logger.debug(f"Using ffprobe duration: {video_duration:.3f}s")
     except (subprocess.CalledProcessError, ValueError, FileNotFoundError) as e:
         # Fallback a MoviePy se ffprobe fallisce
         temp_video = VideoFileClip(video_paths_batch[0])
         video_duration = temp_video.duration
         temp_video.close()
-        print(f"[WARNING] ffprobe failed ({e}), using MoviePy duration: {video_duration:.3f}s")
+        logger.warning(f"ffprobe failed ({e}), using MoviePy duration: {video_duration:.3f}s")
     
     # Configurazione originale: clip sequenziali da 1 secondo
     bp_clip_duration_for_batch = 1.0  # Durata fissa di 1 secondo per clip (originale)
@@ -320,8 +327,8 @@ for i in range(0, len(video_name_and_prompt_list), effective_batch_size):
     
     bp_clips_per_video_for_batch = max_safe_clips
     
-    print(f"[DEBUG] Video duration: {video_duration:.3f}s → Using {bp_clips_per_video_for_batch} clips (max safe)")
-    print(f"[DEBUG] Last clip will be: {bp_clips_per_video_for_batch-1:.0f}s-{bp_clips_per_video_for_batch:.0f}s")
+    logger.debug(f"Video duration: {video_duration:.3f}s → Using {bp_clips_per_video_for_batch} clips (max safe)")
+    logger.debug(f"Last clip will be: {bp_clips_per_video_for_batch-1:.0f}s-{bp_clips_per_video_for_batch:.0f}s")
     
     # La logica originale NON usa tempi personalizzati - usa sampling sequenziale automatico
     clip_start_times = None  # Disabilita tempi personalizzati per usare ConstantClipsPerVideoSampler
@@ -357,10 +364,10 @@ for i in range(0, len(video_name_and_prompt_list), effective_batch_size):
         point2 = 2 * (video_duration - bp_clip_duration_for_batch) / 3
         clip_start_times = [point1, point2]
 
-    print(f"[DEBUG] Video FPS: {fps}, Duration: {video_duration:.2f}s")
-    print(f"[DEBUG] NUOVA LOGICA - Clip duration: {bp_clip_duration_for_batch:.2f}s, Clips to extract: {bp_clips_per_video_for_batch}")
-    print(f"[DEBUG] NUOVA LOGICA - Frames per clip: {bp_frames_per_clip}")
-    print(f"[DEBUG] NUOVA LOGICA - Custom start times: {clip_start_times}")
+    logger.debug(f"Video FPS: {fps}, Duration: {video_duration:.2f}s")
+    logger.debug(f"Clip duration: {bp_clip_duration_for_batch:.2f}s, Clips to extract: {bp_clips_per_video_for_batch}")
+    logger.debug(f"Frames per clip: {bp_frames_per_clip}")
+    logger.debug(f"Custom start times: {clip_start_times}")
 
     # Gestisci il seed e il generatore per il batch
     # Usiamo il seed del primo elemento del batch per il generatore del batch.
@@ -402,10 +409,10 @@ for i in range(0, len(video_name_and_prompt_list), effective_batch_size):
                 # - clips_per_video = durata video (estratti sequenzialmente)
                 # - clip_duration = 1 secondo fisso
                 # - NO clip_start_times (usa ConstantClipsPerVideoSampler automatico)
-                print(f"[DEBUG] Parametri effettivi per bind_forward_double_loss:")
-                print(f"[DEBUG]   - clip_duration: {bp_clip_duration_for_batch}s")  
-                print(f"[DEBUG]   - clips_per_video: {bp_clips_per_video_for_batch}")
-                print(f"[DEBUG]   - video_paths: {[os.path.basename(p) for p in video_paths_batch]}")
+                logger.debug("Parameters for bind_forward_double_loss:")
+                logger.debug(f"  - clip_duration: {bp_clip_duration_for_batch}s")
+                logger.debug(f"  - clips_per_video: {bp_clips_per_video_for_batch}")
+                logger.debug(f"  - video_paths: {[os.path.basename(p) for p in video_paths_batch]}")
                 generated_audios_batch = pipe.bind_forward_double_loss(
                     prompt=prompts_batch,
                     latents=latents_for_batch,
@@ -433,7 +440,7 @@ for i in range(0, len(video_name_and_prompt_list), effective_batch_size):
                     
                     item_info = current_batch_info_list[item_idx_in_batch]
                     item_video_name_full_path = item_info['video_name']
-                    print(f"[INFO] Generazione audio per: {item_video_name_full_path}")
+                    logger.info(f"Audio generation for: {item_video_name_full_path}")
 
                     # Estrai il nome della cartella e il nome base del video per questo specifico item
                     #item_video_folder_name = os.path.basename(os.path.dirname(item_video_name_full_path))
@@ -479,7 +486,7 @@ for i in range(0, len(video_name_and_prompt_list), effective_batch_size):
                         final_video_clip.write_videofile(output_mp4_path, logger=None) # Aggiunto logger=None per meno output
                         
                     except Exception as e:
-                        print(f"Error processing video output for {item_video_name_full_path}: {e}")
+                        logger.error(f"Error processing video output for {item_video_name_full_path}: {e}")
                         # Pulisci i file audio se il video fallisce, se necessario
                         if os.path.exists(output_wav_path):
                             os.remove(output_wav_path)
@@ -501,64 +508,12 @@ for i in range(0, len(video_name_and_prompt_list), effective_batch_size):
                         total, used, free = shutil.disk_usage("/mnt/media/HDD_4TB/riccardo/Codici tesi/")
                         free_gb = free // (1024**3)
                         if free_gb < 50:  # Avviso se meno di 50GB liberi
-                            print(f"[WARNING] Spazio disco basso: {free_gb}GB liberi")
-                        
-                        print(f"[DEBUG] Completato video {item_idx_in_batch+1}/{len(current_batch_info_list)}, spazio libero: {free_gb}GB")
+                            logger.warning(f"Low space on disk: {free_gb}GB free")
+                        logger.debug(f"Completed video {item_idx_in_batch+1}/{len(current_batch_info_list)}, free space: {free_gb}GB")
 
                 # Pulizia memoria e file temporanei dopo ogni batch
                 torch.cuda.empty_cache()
                 import gc
                 gc.collect()
                 
-                # Pulisci file temporanei usando script dedicato
-                # try:
-                #     import subprocess
-                #     cleanup_script = os.path.join(os.path.dirname(__file__), "cleanup_temp_files.py")
-                #     if os.path.exists(cleanup_script):
-                #         # Chiamata script di pulizia in modalità veloce
-                #         result = subprocess.run([
-                #             sys.executable, cleanup_script, 
-                #             "--max-age", "0.5",  # 30 minuti
-                #             "--min-free", "40"   # 40GB soglia
-                #         ], capture_output=True, text=True, timeout=60)
-                        
-                #         if result.returncode == 0 and result.stdout:
-                #             # Stampa solo la riga finale con statistiche
-                #             lines = result.stdout.strip().split('\n')
-                #             for line in lines:
-                #                 if 'Spazio libero dopo pulizia' in line:
-                #                     print(f"[DEBUG] {line}")
-                #                     break
-                #         elif result.returncode != 0:
-                #             print(f"[WARNING] Script pulizia fallito: {result.stderr}")
-                #     else:
-                #         # Fallback: pulizia manuale semplice
-                #         import tempfile
-                #         import shutil
-                #         temp_dir = tempfile.gettempdir()
-                #         current_time = time.time()
-                #         cleaned = 0
-                        
-                #         for temp_item in os.listdir(temp_dir):
-                #             if temp_item.startswith('tmp') and os.path.getctime(os.path.join(temp_dir, temp_item)) < (current_time - 1800):  # 30 min
-                #                 temp_path = os.path.join(temp_dir, temp_item)
-                #                 try:
-                #                     if os.path.isfile(temp_path):
-                #                         os.remove(temp_path)
-                #                         cleaned += 1
-                #                     elif os.path.isdir(temp_path):
-                #                         shutil.rmtree(temp_path)
-                #                         cleaned += 1
-                #                 except (OSError, PermissionError):
-                #                     pass
-                        
-                #         if cleaned > 0:
-                #             print(f"[DEBUG] Puliti {cleaned} file temporanei (fallback)")
-                            
-                # except (subprocess.TimeoutExpired, Exception) as e:
-                #     print(f"[WARNING] Errore pulizia temporanei: {e}")
                 
-                # print(f"[DEBUG] Memoria e file temporanei puliti dopo batch")
-
-
-

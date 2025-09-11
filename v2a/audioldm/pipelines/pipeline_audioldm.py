@@ -42,6 +42,13 @@ from utils.utils_for_fast_inference import build_batch
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
+# Debug helper: enable verbose internal prints only if environment variable V2A_DEBUG=1
+import os as _os
+_AUDIO_PIPE_DEBUG = _os.environ.get("V2A_DEBUG", "0") == "1"
+def _dbg(*args, **kwargs):
+    if _AUDIO_PIPE_DEBUG:
+        print(*args, **kwargs)
+
 EXAMPLE_DOC_STRING = """
     Examples:
         ```py
@@ -1021,8 +1028,8 @@ class AudioLDMPipeline(DiffusionPipeline):
         gram_model = None,
         args_gram = None,
         use_gram_loss: bool = False,
-        #gram_contrastive_temp: float = 0.07, # Parametro per GRAM loss
-        #gram_label_smoothing: float = 0.1, # Parametro per GRAM loss
+        #gram_contrastive_temp: float = 0.07,
+        #gram_label_smoothing: float = 0.1,
     ):
         if use_gram_loss and (gram_model is None or args_gram is None):
             raise ValueError("To use gram_loss, you must provide `gram_model` and `args_gram`.")
@@ -1101,22 +1108,20 @@ class AudioLDMPipeline(DiffusionPipeline):
 
         #image_bind_video_input = load_and_transform_video_data(video_paths, device, clip_duration=clip_duration, clips_per_video=clips_per_video, n_samples_per_clip=2)
         
-        # CACHE VIDEO EMBEDDINGS (versione funzionante originale)
-        print("[DEBUG][CACHE] Pre-caricamento video embeddings...", flush=True)
+        # CACHE VIDEO EMBEDDINGS
+        _dbg("[DEBUG][CACHE] Pre-loading of embeddings", flush=True)
         cached_video_embeddings = None
         
         if use_gram_loss and gram_model is not None:
-            # GRAM logic qui se necessario
             pass
         else:
-            # BIND logic - pre-calcola video embeddings una sola volta
-            print("[DEBUG][CACHE] Caricamento video per ImageBind...", flush=True)
+            _dbg("[DEBUG][CACHE] Loading videos for ImageBind...", flush=True)
             image_bind_video_input = load_and_transform_video_data(
                 video_paths, 
                 device, 
                 clip_duration=clip_duration, 
                 clips_per_video=clips_per_video, 
-                clip_start_times=clip_start_times,  # Passa i tempi personalizzati
+                clip_start_times=clip_start_times, 
                 n_samples_per_clip=n_samples_per_clip
             )
             
@@ -1128,9 +1133,9 @@ class AudioLDMPipeline(DiffusionPipeline):
                 cached_video_embeddings = bind_model({
                     ModalityType.VISION: image_bind_video_input
                 })
-                print(f"[DEBUG][CACHE] Video embeddings calcolati, shape: {cached_video_embeddings[ModalityType.VISION].shape}", flush=True)
-                
-            # Libera memoria del video processato
+                _dbg(f"[DEBUG][CACHE] Video embeddings calculated, shape: {cached_video_embeddings[ModalityType.VISION].shape}", flush=True)
+
+            # Release memory of the processed video
             del image_bind_video_input
             torch.cuda.empty_cache()
     
@@ -1140,9 +1145,8 @@ class AudioLDMPipeline(DiffusionPipeline):
         num_warmup_steps_bind = int(len(timesteps) * optimization_starting_point)
         with self.progress_bar(total=num_inference_steps) as progress_bar:
             for i, t in enumerate(timesteps):
-                print(f"[DEBUG] Step {i}/{len(timesteps)} - t={t}", flush=True)
-
-                print("[DEBUG] Prima di UNet, latents shape:", latents.shape, flush=True)
+                _dbg(f"[DEBUG] Step {i}/{len(timesteps)} - t={t}", flush=True)
+                _dbg("[DEBUG] Prima di UNet, latents shape:", latents.shape, flush=True)
         
 
                 # expand the latents if we are doing classifier free guidance
@@ -1152,7 +1156,7 @@ class AudioLDMPipeline(DiffusionPipeline):
                 
                 # predict the noise residual
                 with torch.no_grad():
-                    print("[DEBUG] Chiamata UNet...", flush=True)
+                    _dbg("[DEBUG] Chiamata UNet...", flush=True)
 
                     noise_pred = self.unet(
                         latent_model_input,
@@ -1161,7 +1165,7 @@ class AudioLDMPipeline(DiffusionPipeline):
                         class_labels=prompt_embeds,
                         cross_attention_kwargs=cross_attention_kwargs,
                     ).sample.to(dtype=latents_dtype)
-                    print("[DEBUG] Dopo UNet, noise_pred shape:", noise_pred.shape, flush=True)
+                    _dbg("[DEBUG] Dopo UNet, noise_pred shape:", noise_pred.shape, flush=True)
 
 
                 # perform guidance
@@ -1170,10 +1174,10 @@ class AudioLDMPipeline(DiffusionPipeline):
                     noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
 
                 # compute the previous noisy sample x_t -> x_t-1
-                print("[DEBUG] Chiamata scheduler.step...", flush=True)
+                _dbg("[DEBUG] Calling scheduler.step...", flush=True)
 
                 latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
-                print("[DEBUG] Dopo scheduler.step, latents shape:", latents.shape, flush=True)
+                _dbg("[DEBUG] After scheduler.step, latents shape:", latents.shape, flush=True)
 
                 latents_temp = latents.detach()
                 latents_temp.requires_grad = True
@@ -1195,7 +1199,7 @@ class AudioLDMPipeline(DiffusionPipeline):
                             # 3. convert mel-spectrogram to waveform
                             x0_waveform = self.vocoder(x0_mel_spectrogram)
 
-                            calculated_loss = 0 # Inizializza la loss a 0
+                            calculated_loss = 0
 
                             ######## USE GRAM LOSS ########
                             if use_gram_loss:
@@ -1209,14 +1213,6 @@ class AudioLDMPipeline(DiffusionPipeline):
                                     audio=x0_waveform,
                                 )
 
-                                #print(f"DEBUG: build_batch inputs - text: {type(prompt)}, video: {type(video_paths)}, audio: {type(x0_waveform)}")
-                                #if isinstance(prompt, list):
-                                    #print(f"DEBUG: text length: {len(prompt)}")
-                                #if isinstance(video_paths, list):
-                                    #print(f"DEBUG: video_paths length: {len(video_paths)}")
-                                #print(f"DEBUG: x0_waveform shape: {x0_waveform.shape}")
-                                #print(f"DEBUG: batch_for_gram is None: {batch_for_gram is None}")
-
                                 if batch_for_gram is None:
                                     print("Warning: build_batch returned None, skipping GRAM loss computation")
                                     calculated_loss = torch.tensor(0.0, device=device, requires_grad=True)
@@ -1226,10 +1222,6 @@ class AudioLDMPipeline(DiffusionPipeline):
                                     feat_v = evaluation_dict['feat_v']
                                     feat_a = evaluation_dict['feat_a']
 
-                                    # Clear temporary audio files
-                                    # for temp_path in temp_audio_files:
-                                    #     os.remove(temp_path)
-
                                     # Calculate the volume, we want to minimize it to maximize alignment.
                                     volume = self.volume_computation(feat_t, feat_v, feat_a)
                                     calculated_loss = volume.mean() # La loss è direttamente il volume.
@@ -1237,7 +1229,6 @@ class AudioLDMPipeline(DiffusionPipeline):
 
                             ######## USE BIND LOSS ########
                             else:
-                                # SOLO QUESTA RIGA È CAMBIATA: uso cached video invece di ricaricare
                                 for p in bind_model.parameters():
                                     p.requires_grad = False
                 
@@ -1278,28 +1269,25 @@ class AudioLDMPipeline(DiffusionPipeline):
                                             for x in inputs_for_bind[k_bind]
                                         ]
                             
-                                # Calcola embeddings per audio e text
                                 embeddings = bind_model(inputs_for_bind)
                                 
-                                # AGGIUNGI cached video embeddings (questa è l'unica ottimizzazione)
                                 if cached_video_embeddings is not None:
                                     embeddings[ModalityType.VISION] = cached_video_embeddings[ModalityType.VISION]
                                 #normalize embeddings
-                                audio_embeds = F.normalize(embeddings[ModalityType.AUDIO], dim=1, p=2) # Shape: (batch_size * num_waveforms_per_prompt, embed_dim)
-                                #print(f"Shape of audio_embeds: {audio_embeds.shape}")
+                                audio_embeds = F.normalize(embeddings[ModalityType.AUDIO], dim=1, p=2) 
                                 
                                 accumulated_cosine_loss_per_sample = torch.zeros_like(audio_embeds[:, 0], device=audio_embeds.device, dtype=audio_embeds.dtype)
                                 loss_components_cosine = 0
                                 
                                 if ModalityType.TEXT in embeddings:
-                                    text_embeds = embeddings[ModalityType.TEXT] # Shape: (batch_size, embed_dim)
+                                    text_embeds = embeddings[ModalityType.TEXT]
                                     text_embeds_repeated = text_embeds.repeat_interleave(num_waveforms_per_prompt, dim=0)
                                     bind_loss_text_audio_per_sample = 1 - F.cosine_similarity(text_embeds_repeated, audio_embeds) # Tensore (N,)
                                     accumulated_cosine_loss_per_sample += bind_loss_text_audio_per_sample
                                     loss_components_cosine +=1
 
                                 if ModalityType.VISION in embeddings:
-                                    vision_embeds = embeddings[ModalityType.VISION] # Shape: (batch_size, embed_dim)
+                                    vision_embeds = embeddings[ModalityType.VISION]
                                     vision_embeds_repeated = vision_embeds.repeat_interleave(num_waveforms_per_prompt, dim=0)
                                     bind_loss_vision_audio_per_sample = 1 - F.cosine_similarity(vision_embeds_repeated, audio_embeds) # Tensore (N,)
                                     accumulated_cosine_loss_per_sample += bind_loss_vision_audio_per_sample
@@ -1307,19 +1295,18 @@ class AudioLDMPipeline(DiffusionPipeline):
                                 
                                 if loss_components_cosine > 0:
                                     calculated_loss = accumulated_cosine_loss_per_sample.mean()
-                                    print(f"[DEBUG] calculated_loss: {calculated_loss}", flush=True)
-                                    print(f"[DEBUG] calculated_loss shape: {calculated_loss.shape}", flush=True)
+                                    _dbg(f"[DEBUG] calculated_loss: {calculated_loss}", flush=True)
+                                    _dbg(f"[DEBUG] calculated_loss shape: {calculated_loss.shape}", flush=True)
 
-                            print(f"[DEBUG] Ottimizzazione step {optim_step} per denoising step {i}", flush=True)
-                            print("[DEBUG] Prima di calculated_loss.backward()", flush=True)
-                            if calculated_loss != 0: # Check if any loss was actually calculated
-                                #print(f"Calculated loss: {calculated_loss.item()}")
+                            _dbg(f"[DEBUG] Optimization step {optim_step} for denoising step {i}", flush=True)
+                            _dbg("[DEBUG] Before calculated_loss.backward()", flush=True)
+                            if calculated_loss != 0:
                                 calculated_loss.backward() 
-                                print("[DEBUG] Dopo backward()", flush=True)
+                                _dbg("[DEBUG] After backward()", flush=True)
                                 optimizer.step()
-                                print("[DEBUG] Dopo optimizer.step()", flush=True)
+                                _dbg("[DEBUG] After optimizer.step()", flush=True)
                             optimizer.zero_grad()
-                            print("[DEBUG] Dopo optimizer.zero_grad()", flush=True)
+                            _dbg("[DEBUG] After optimizer.zero_grad()", flush=True)
 
                 latents = latents_temp.detach()
 
@@ -1333,7 +1320,7 @@ class AudioLDMPipeline(DiffusionPipeline):
                 if torch.cuda.is_available():
                     used = torch.cuda.memory_allocated() / 1024**3
                     total = torch.cuda.get_device_properties(device).total_memory / 1024**3
-                    print(f"[DEBUG][VRAM] GPU memory used: {used:.2f} GB / {total:.2f} GB", flush=True)
+                    _dbg(f"[DEBUG][VRAM] GPU memory used: {used:.2f} GB / {total:.2f} GB", flush=True)
 
         # 8. Post-processing
         mel_spectrogram = self.decode_latents(latents)
@@ -1342,7 +1329,6 @@ class AudioLDMPipeline(DiffusionPipeline):
         audio = audio[:, :original_waveform_length] # [1, 128000]
 
         if output_type == "np":
-            # audio = audio.numpy()
             audio = audio.detach().numpy()
 
         if not return_dict:

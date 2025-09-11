@@ -1,0 +1,73 @@
+audioread>=3.0.0
+###############################################
+# Reproducible requirements (pinned versions) #
+###############################################
+# Generated from active environment after activation (CUDA 11.8 wheels)
+
+# Core deep learning stack (PyTorch CUDA 11.8)
+torch==2.2.0+cu118
+torchvision==0.17.0+cu118
+torchaudio==2.2.0+cu118
+
+# Diffusion / Transformers ecosystem
+diffusers==0.21.1
+accelerate==0.23.0
+safetensors==0.5.3
+huggingface-hub==0.25.2
+# Custom transformers fork commit (keep exact reference)
+transformers @ git+https://github.com/yzxing87/transformers@4099b61942567e5c79c8b5b647717066078afccb
+
+# Audio processing
+soundfile==0.12.1
+librosa==0.10.1
+audioread==3.0.1
+
+# Video & media
+moviepy==1.0.3
+decord==0.6.0
+opencv-python==4.8.1.78
+opencv-python-headless==4.8.1.78
+pytorchvideo @ git+https://github.com/facebookresearch/pytorchvideo.git@6cdc929315aab1b5674b6dcf73b16ec99147735f
+
+# Vision / tensor ops
+einops==0.7.0
+Pillow==10.0.1
+numpy==1.26.4
+scipy==1.11.3
+
+# Data handling
+pandas==2.1.2
+
+# Tokenizers / text utils
+sentencepiece==0.1.99
+PyYAML==6.0.1
+
+# Progress / utilities
+tqdm==4.65.2
+requests==2.32.3
+
+# Optional / model related (pinned but can be commented out if unused)
+open-clip-torch==2.24.0
+pytorch-ignite==0.4.13
+pytorch-lightning==1.2.10
+torchmetrics==0.2.0
+rotary-embedding-torch==0.2.5
+transformers-stream-generator==0.0.5
+
+# Notes:
+# - If installing on a machine without matching CUDA runtime, replace the three PyTorch lines with the appropriate index-url, e.g.:
+#   pip install --index-url https://download.pytorch.org/whl/cu121 torch torchvision torchaudio
+# - 'transformers' is from a fork; replace with an official release if/when possible.
+# - Keep both opencv variants only if you need GUI (opencv-python) and headless usage; otherwise drop one.
+# - pytorchvideo is pulled from a specific commit for stability.
+# - Remove optional block above if you want a minimal runtime environment.
+
+# To export an exact spec including transitive deps later:
+#   pip freeze > requirements.lock.txt
+
+# To create environment:
+#   python -m venv .venv && source .venv/bin/activate
+#   pip install --upgrade pip
+#   pip install -r requirements.txt
+
+# End of file

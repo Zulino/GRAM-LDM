@@ -113,3 +113,30 @@ python calculate_embeddings_volume.py \
 ```
 
 The script will generate a log file and a results file (`.txt`) containing the calculated volume and similarity losses for each data sample.
+
+## Acknowledgements
+
+This work builds upon the models and code from the following research. We thank the original authors for making their work publicly available.
+
+- **GRAM: Generative retrieval-augmented model for audio-visual composition**
+  ```bibtex
+  @inproceedings{esposito2024gram,
+        title={{GRAM}: Generative retrieval-augmented model for audio-visual composition},
+        author={Esposito, Gennaro and Messina, Francesco and Es-sounoussi, Anas and Ortis, Alessandro and Bassignana, Edoardo and Messina, Giovanni Maria and Ballan, Lamberto},
+        booktitle={Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision},
+        pages={7765--7775},
+        year={2024}
+  }
+  ```
+  [Repository Link](https://github.com/ispamm/GRAM)
+
+- **Seeing and Hearing: Open-domain Visual-Audio Generation with Diffusion Model**
+  ```bibtex
+  @inproceedings{xing2023seeing,
+    title={Seeing and Hearing: Open-domain Visual-Audio Generation with Diffusion Model},
+    author={Xing, Yaze and Xin, Jing and Wu, Chenghao and Liu, Yang},
+    booktitle={Thirty-seventh Conference on Neural Information Processing Systems},
+    year={2023}
+  }
+  ```
+  [Repository Link](https://github.com/yzxing87/Seeing-and-Hearing)

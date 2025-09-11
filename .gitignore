@@ -24,8 +24,11 @@ embeddings_imagebind
 v2a/qwen_caption.log
 v2a/video2audio.log
 v2a/extract_key_frame.log
-results_gram_20250910_160911.txt
-results_imagebind_20250910_161153.txt
+
+
+# General patterns for future result metric files
+results_gram_*.txt
+results_imagebind_*.txt
 
 # Ignore root checkpoints directory to avoid pushing >2GB model weights
 .checkpoints/

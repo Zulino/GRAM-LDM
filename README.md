@@ -1,8 +1,10 @@
 # GRAM-LDM
 
+<img width="2702" height="1050" alt="risultato_confronto (1)" src="https://github.com/user-attachments/assets/27efb2c8-0479-4e3f-b23d-55b6896e472b" />
+
 This repository contains a pipeline for generating audio from video and text using models like GRAM and ImageBind. It also includes scripts to analyze multimodal consistency by calculating the geometric volume of the embedding space. We implemented the model substituting the guidance system made with ImageBind in the original "Seeing and Hearing" repository with our custom GRAM-based guidance system from the GRAM repository.
 
-## Environment Setup
+## Environment Setup🛠️
 
 To run the code in this repository, you need to set up a Python environment and install the required dependencies.
 
@@ -16,7 +18,7 @@ python3.10 -m venv venv
 
 This will create a `venv` folder in the project directory.
 
-### 2. Activate the Virtual Environment
+### 2. Activate the Virtual Environment👍
 
 Before installing dependencies, activate the newly created environment.
 
@@ -32,7 +34,8 @@ venv\Scripts\activate.bat
 
 Once activated, the virtual environment's name (e.g., `(venv)`) will appear at the beginning of your command line prompt.
 
-### 3. Install Dependencies
+### 3. Install Dependencies⬇️
+
 
 With the virtual environment active, install all necessary libraries by running:
 
@@ -56,7 +59,7 @@ Make sure to place the downloaded files in the appropriate directories as expect
 
 ## Usage
 
-### Audio Generation Pipeline (`v2a/pipeline.sh`)
+### Audio Generation Pipeline (`v2a/pipeline.sh`)🔈
 
 The `pipeline.sh` script orchestrates the entire process of generating audio from an input video.
 
@@ -78,7 +81,7 @@ The `pipeline.sh` script orchestrates the entire process of generating audio fro
     ```
     Logs for each step will be saved to separate `.log` files in the same directory.
 
-### Calculating Embedding Volume (`calculate_embeddings_volume.py`)
+### Calculating Embedding Volume (`calculate_embeddings_volume.py`)🧊
 
 This script is used to evaluate the consistency between text, video, and audio embeddings. It calculates the geometric volume of the space spanned by the embedding vectors (using the Gram matrix determinant) and the cosine similarity loss.
 
@@ -114,7 +117,7 @@ python calculate_embeddings_volume.py \
 
 The script will generate a log file and a results file (`.txt`) containing the calculated volume and similarity losses for each data sample.
 
-## Acknowledgements
+## Acknowledgements👏
 
 This work builds upon the models and code from the following research. We thank the original authors for making their work publicly available.
 

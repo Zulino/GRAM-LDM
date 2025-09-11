@@ -120,23 +120,23 @@ This work builds upon the models and code from the following research. We thank 
 
 - **GRAM: Generative retrieval-augmented model for audio-visual composition**
   ```bibtex
-  @inproceedings{esposito2024gram,
-        title={{GRAM}: Generative retrieval-augmented model for audio-visual composition},
-        author={Esposito, Gennaro and Messina, Francesco and Es-sounoussi, Anas and Ortis, Alessandro and Bassignana, Edoardo and Messina, Giovanni Maria and Ballan, Lamberto},
-        booktitle={Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision},
-        pages={7765--7775},
-        year={2024}
+  @inproceedings{cicchetti2025gramian,
+   title={Gramian Multimodal Representation Learning and Alignment},
+   author={Giordano Cicchetti and Eleonora Grassucci and Luigi Sigillo and Danilo Comminiello},
+   booktitle={The Thirteenth International Conference on Learning Representations},
+   year={2025},
+   url={https://openreview.net/forum?id=ftGnpZrW7P}
   }
   ```
   [Repository Link](https://github.com/ispamm/GRAM)
 
 - **Seeing and Hearing: Open-domain Visual-Audio Generation with Diffusion Model**
   ```bibtex
-  @inproceedings{xing2023seeing,
-    title={Seeing and Hearing: Open-domain Visual-Audio Generation with Diffusion Model},
-    author={Xing, Yaze and Xin, Jing and Wu, Chenghao and Liu, Yang},
-    booktitle={Thirty-seventh Conference on Neural Information Processing Systems},
-    year={2023}
+  @inproceedings{xing24seeing,
+  title     = {Seeing and Hearing: Open-domain Visual-Audio Generation with Diffusion Latent Aligners},
+  author    = {Xing, Yazhou and He, Yingqing and Tian, Zeyue and Wang, Xintao and Chen, Qifeng},
+  booktitle = {CVPR},
+  year      = {2024}
   }
   ```
   [Repository Link](https://github.com/yzxing87/Seeing-and-Hearing)

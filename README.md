@@ -57,7 +57,7 @@ This pipeline requires pre-trained models (checkpoints) to function correctly. F
 
 Make sure to place the downloaded files in the appropriate directories as expected by the scripts.
 
-## Usage
+## Usage🤔
 
 ### Audio Generation Pipeline (`v2a/pipeline.sh`)🔈
 

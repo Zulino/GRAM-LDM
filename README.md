@@ -1,6 +1,6 @@
 # GRAM-LDM
 
-This repository contains a pipeline for generating audio from video and text using models like GRAM and ImageBind. It also includes scripts to analyze multimodal consistency by calculating the geometric volume of the embedding space.
+This repository contains a pipeline for generating audio from video and text using models like GRAM and ImageBind. It also includes scripts to analyze multimodal consistency by calculating the geometric volume of the embedding space. We implemented the model substituting the guidance system made with ImageBind in the original "Seeing and Hearing" repository with our custom GRAM-based guidance system from the GRAM repository.
 
 ## Environment Setup
 

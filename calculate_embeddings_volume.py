@@ -8,8 +8,6 @@ import pandas as pd
 import logging
 from datetime import datetime
 
-# --- Le definizioni delle funzioni rimangono qui ---
-
 def _ensure_dir(path: str):
     os.makedirs(path, exist_ok=True)
 
@@ -39,8 +37,7 @@ def _save_tensor(path: str, tensor: torch.Tensor):
 
 def volume_computation(language, video, audio):
     """
-    Calcola il volume geometrico dello spazio generato dagli embedding
-    utilizzando il determinante della matrice di Gram.
+    calculate the geometric volume of the space spanned by the embeddings
     """
     if language.dim() == 1: language = language.unsqueeze(0)
     if video.dim() == 1: video = video.unsqueeze(0)
@@ -54,7 +51,7 @@ def volume_computation(language, video, audio):
 
 def load_captions_from_csv(csv_path):
     """
-    Carica le didascalie dal file CSV di VGGSound in un dizionario per una ricerca rapida.
+    load captions from a CSV file into a dictionary
     """
     logging.info(f"Loading captions from {csv_path}...")
     try:
@@ -66,28 +63,96 @@ def load_captions_from_csv(csv_path):
         logging.error(f"An error occurred while reading the CSV file: {e}", exc_info=True)
         sys.exit(1)
 
+def load_captions_from_index(index_path):
+    """
+    load captions from a baseline_captions_index.txt style file into a dictionary
+    """
+    logging.info(f"Loading captions index from {index_path}...")
+    captions = {}
+    try:
+        with open(index_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                if not line.startswith('id: '):
+                    continue
+                try:
+                    left, right = line.split('\tcaption:', 1)
+                    vid = left.split('id:', 1)[1].strip()
+                    caption = right.strip()
+                    # vid ha già forma <ytid>_<start>
+                    captions[vid] = caption
+                except ValueError:
+                    continue
+        logging.info(f"Loaded {len(captions)} captions from index.")
+    except Exception as e:
+        logging.error(f"Failed to load captions index: {e}")
+        sys.exit(1)
+    return captions
+
 def find_matching_files_from_csv(video_dir, audio_dir, captions_map):
     """
-    Trova file video e audio corrispondenti ed estrae la caption dalla mappa caricata dal CSV.
+    Find matching video and audio files and extract the caption.
+    supports audio filename variants:
+      - file_<id>_<start>.wav
+      - file_<id>_<start>_generated.wav
+      - file_-<id>_<start>.wav (video with '-' prefix)
+      - file_-_<id>_<start>.wav (generated variant) and relative versions with _generated
+    The matching normalizes names by removing optional '_generated' and converting 'file_-_' -> 'file_-'.
     """
     video_files = [f for f in os.listdir(video_dir) if f.endswith('.mp4')]
+    audio_files = [f for f in os.listdir(audio_dir) if f.endswith('.wav')]
+
+    def _normalize_audio_stem(stem: str):
+        # Remove generated suffix
+        if stem.endswith('_generated'):
+            stem = stem[:-10]
+        # Collapse file_-_ to file_-
+        stem = stem.replace('file_-_', 'file_-')
+        return stem
+
+    # Build lookup map: normalized stem -> best filename (prefer generated if multiple)
+    audio_map = {}
+    for af in audio_files:
+        stem, _ = os.path.splitext(af)
+        norm = _normalize_audio_stem(stem)
+        # Prefer a _generated version if present (processed later when encountering it)
+        prev = audio_map.get(norm)
+        if prev is None or (stem.endswith('_generated') and not prev.endswith('_generated')):
+            audio_map[norm] = af
+
     matched_files = []
-    
     for video_file in video_files:
         base_name, _ = os.path.splitext(video_file)
         try:
             clean_name = base_name.replace('file_', '', 1)
+            # Also handle possible leading '-'
             ytid, start_s = clean_name.rsplit('_', 1)
             lookup_key = f"{ytid}_{start_s}"
         except ValueError:
             logging.warning(f"Could not parse YouTube ID and start time from '{base_name}'. Skipping.")
             continue
 
-        audio_file = base_name + '.wav'
+        # Normalized video stem for audio matching (mirror normalization rules)
+        norm_video_stem = base_name.replace('file_-', 'file_-')  # no-op but explicit
+        norm_video_stem = norm_video_stem  # placeholder if more rules added
+
+        # Direct match first
+        audio_candidate = None
+        if norm_video_stem in audio_map:
+            audio_candidate = audio_map[norm_video_stem]
+        else:
+            # Try variant where video base has pattern file_-<id> and audio used file_-_<id>
+            if norm_video_stem.startswith('file_-'):
+                alt = norm_video_stem.replace('file_-', 'file_-_', 1)
+                if alt in audio_map:
+                    audio_candidate = audio_map[alt]
+
         video_path = os.path.join(video_dir, video_file)
-        audio_path = os.path.join(audio_dir, audio_file)
-        
-        if os.path.exists(audio_path) and lookup_key in captions_map:
+        if audio_candidate:
+            audio_path = os.path.join(audio_dir, audio_candidate)
+        else:
+            audio_path = None
+
+        if audio_path and os.path.exists(audio_path) and lookup_key in captions_map:
             caption_text = captions_map[lookup_key]
             matched_files.append({
                 'video': video_path,
@@ -95,13 +160,13 @@ def find_matching_files_from_csv(video_dir, audio_dir, captions_map):
                 'caption': caption_text,
                 'id': base_name
             })
-            logging.info(f"Found match: {base_name} -> Caption: '{caption_text}'")
+            logging.info(f"Found match: {base_name} -> {os.path.basename(audio_path)} -> Caption: '{caption_text}'")
         else:
-            if not os.path.exists(audio_path):
-                 logging.warning(f"No matching audio found for {video_file}")
+            if not audio_path or not os.path.exists(audio_path):
+                logging.warning(f"No matching audio found for {video_file}")
             if lookup_key not in captions_map:
-                 logging.warning(f"No caption found in CSV for key '{lookup_key}' from file {video_file}")
-            
+                logging.warning(f"No caption found for key '{lookup_key}' from file {video_file}")
+
     return matched_files
 
 def main(args, script_root_path):
@@ -114,22 +179,19 @@ def main(args, script_root_path):
     elif args.model == 'imagebind':
         from imagebind.imagebind.models import imagebind_model
         from imagebind.imagebind.models.imagebind_model import ModalityType
-        # Usa gli helper della pipeline come in v2a/audioldm/pipelines/pipeline_audioldm.py
         from audioldm.pipelines.imagebind_data import (
             load_and_transform_text,
             load_and_transform_video_data,
             load_and_transform_audio_data,
         )
 
-    # Converte i percorsi in assoluti per renderli indipendenti dalla CWD
     args.video_dir = os.path.abspath(args.video_dir)
     args.audio_dir = os.path.abspath(args.audio_dir)
-    args.csv_path = os.path.abspath(args.csv_path)
-    # Non convertire pretrain_dir in assoluto: alcune utility GRAM concatenano la root internamente
-    # e passare un path assoluto può causare duplicazioni del prefisso.
-
-    # Nota: il modello GRAM inizializza internamente i moduli su cuda:0.
-    # Per evitare mismatch di device (cuda:0 vs cuda:1), usiamo esplicitamente cuda:0 qui.
+    if args.csv_path:
+        args.csv_path = os.path.abspath(args.csv_path)
+    if args.captions_index:
+        args.captions_index = os.path.abspath(args.captions_index)
+    
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     if device.startswith("cuda"):
         torch.cuda.set_device(int(device.split(":")[1]))
@@ -151,11 +213,16 @@ def main(args, script_root_path):
     logging.info(f"{args.model.upper()} model loaded successfully.")
 
     # Setup directory per la cache degli embeddings (separata per modello)
-    embeddings_dir = os.path.join(script_root_path, f"embeddings_{args.model}")
+    # Directory embeddings: può essere sovrascritta da --embeddings_dir
+    embeddings_dir = args.embeddings_dir or os.path.join(script_root_path, f"embeddings_{args.model}")
     _ensure_dir(embeddings_dir)
     logging.info(f"Embeddings cache directory: {embeddings_dir}")
 
-    captions_map = load_captions_from_csv(args.csv_path)
+    # Carica caption da index oppure da csv
+    if args.captions_index:
+        captions_map = load_captions_from_index(args.captions_index)
+    else:
+        captions_map = load_captions_from_csv(args.csv_path)
     matched_files = find_matching_files_from_csv(args.video_dir, args.audio_dir, captions_map)
     
     if not matched_files:
@@ -168,7 +235,7 @@ def main(args, script_root_path):
     losses_la_list = []  # language-audio
     losses_va_list = []  # video-audio
 
-    # Salva i risultati nella directory originale dello script
+    # Save results to CSV
     results_filename = os.path.join(script_root_path, f"results_{args.model}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
     logging.info(f"Results will be saved to {results_filename}")
 
@@ -180,14 +247,14 @@ def main(args, script_root_path):
             try:
                 lang_embed, video_embed, audio_embed = None, None, None
 
-                # Percorsi cache per embeddings
+                # cache embeddings paths
                 cache_paths = _embedding_paths(embeddings_dir, file_info['id'])
-                cached_text = _try_load_tensor(cache_paths['text'], device)
+                cached_text = None if args.recompute_text else _try_load_tensor(cache_paths['text'], device)
                 cached_video = _try_load_tensor(cache_paths['video'], device)
-                cached_audio = _try_load_tensor(cache_paths['audio'], device)
+                cached_audio = None if args.recompute_audio else _try_load_tensor(cache_paths['audio'], device)
 
                 if args.model == 'gram':
-                    # Se gli embedding non sono tutti presenti in cache, calcola e salva tutti
+                    # If not all embeddings are present in cache, compute and save all
                     if not (cached_text is not None and cached_video is not None and cached_audio is not None):
                         waveform, _ = torchaudio.load(file_info['audio'])
                         if waveform.shape[0] == 2:
@@ -235,7 +302,7 @@ def main(args, script_root_path):
                         with torch.no_grad():
                             output = model(inputs)
 
-                        # Usa output disponibili e cache
+                        # Use and save available outputs and cache
                         if need_text:
                             lang_embed = output[ModalityType.TEXT]
                             _save_tensor(cache_paths['text'], lang_embed)
@@ -258,7 +325,7 @@ def main(args, script_root_path):
                     else:
                         lang_embed, video_embed, audio_embed = cached_text, cached_video, cached_audio
 
-                # --- Logica di calcolo comune ---
+                
                 lang_embed_norm = F.normalize(lang_embed, p=2, dim=-1)
                 video_embed_norm = F.normalize(video_embed, p=2, dim=-1)
                 audio_embed_norm = F.normalize(audio_embed, p=2, dim=-1)
@@ -331,11 +398,9 @@ if __name__ == '__main__':
         imagebind_working_dir = os.path.join(script_root, 'v2a')
         if os.path.isdir(imagebind_working_dir):
             os.chdir(imagebind_working_dir)
-            # Aggiunge il nuovo CWD al path per gli import
             if imagebind_working_dir not in sys.path:
                 sys.path.insert(0, imagebind_working_dir)
     
-    # Aggiunge i percorsi per le librerie GRAM
     gram_utils_path = os.path.join(script_root, 'gram-utils')
     if gram_utils_path not in sys.path:
         sys.path.insert(0, gram_utils_path)
@@ -343,18 +408,22 @@ if __name__ == '__main__':
     if gram_model_path not in sys.path:
         sys.path.insert(0, gram_model_path)
     
-    # Setup del logging
+    # Logging setup
     log_filename = os.path.join(original_cwd, f"volume_calculation_{parsed_args.model}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] - %(message)s",
                         handlers=[logging.FileHandler(log_filename), logging.StreamHandler(sys.stdout)])
-    
-    # Parsing completo degli argomenti
+
+    # Argument parsing
     parser = argparse.ArgumentParser(description="Calculate embedding volume and cosine similarity loss.")
     parser.add_argument('--model', type=str, required=True, choices=['gram', 'imagebind'], help='Model to use for embedding extraction.')
-    parser.add_argument('--video_dir', type=str, required=True)
-    parser.add_argument('--audio_dir', type=str, required=True)
-    parser.add_argument('--csv_path', type=str, required=True)
-    parser.add_argument('--pretrain_dir', type=str, help='Path to the pretrained GRAM model directory (required if --model is gram).')
+    parser.add_argument('--video_dir', type=str, required=True, help='Directory with video files.')
+    parser.add_argument('--audio_dir', type=str, required=True, help='Directory with audio files.')
+    parser.add_argument('--csv_path', type=str, help='CSV (ytid,start_s,caption,split) original captions.')
+    parser.add_argument('--captions_index', type=str, help='Caption index file (lines: id: <ytid>_<start>\tcaption: <text>).')
+    parser.add_argument('--pretrain_dir', type=str, help='Path to pretrained GRAM model directory (required if --model is gram).')
+    parser.add_argument('--recompute_text', action='store_true', help='Force recomputation of text embeddings ignoring existing cache file.')
+    parser.add_argument('--recompute_audio', action='store_true', help='Force recomputation of audio embeddings ignoring existing cache file.')
+    parser.add_argument('--embeddings_dir', type=str, help='Optional override directory for embeddings cache.')
     
     try:
         import torchaudio
@@ -362,11 +431,17 @@ if __name__ == '__main__':
         logging.warning("torchaudio not found, it may be a dependency for audio processing.")
 
     final_parsed_args = parser.parse_args()
+
+    # Caption arguments validation
+    if not final_parsed_args.csv_path and not final_parsed_args.captions_index:
+        parser.error('One of --csv_path or --captions_index must be provided.')
+    if final_parsed_args.csv_path and final_parsed_args.captions_index:
+        logging.warning('Both --csv_path and --captions_index provided; using captions_index and ignoring csv_path.')
     
     try:
-        # Passa il percorso root dello script a main per salvare i file di output
+        # Pass the script root path to main to save output files
         main(final_parsed_args, script_root_path=original_cwd)
     finally:
-        # Ripristina la directory di lavoro originale
+        # Restore original working directory
         os.chdir(original_cwd)
         logging.shutdown()

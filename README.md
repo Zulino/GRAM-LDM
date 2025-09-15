@@ -121,7 +121,7 @@ The script will generate a log file and a results file (`.txt`) containing the c
 
 This work builds upon the models and code from the following research. We thank the original authors for making their work publicly available.
 
-- **GRAM: Generative retrieval-augmented model for audio-visual composition**
+- **GRAM: Gramian Multimodal Representation Learning and Alignment**
   ```bibtex
   @inproceedings{cicchetti2025gramian,
    title={Gramian Multimodal Representation Learning and Alignment},
